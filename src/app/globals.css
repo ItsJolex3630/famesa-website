@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --famesa-navy: #0a1a3a;
+    --famesa-blue: #00299f;
+    --famesa-electric: #003ad7;
+    --famesa-silver: #e5e5e5;
+    --famesa-silver-dark: #c8d2e0;
+    --famesa-ink: #12203a;
+    --famesa-muted: #5b6a85;
+    --famesa-orange: #ff8a1f;
+    --famesa-alert: #dc2626;
+  }
+
+  /* Regla cardinal: High-Precision Industrial Brutalism. Esquinas vivas. */
+  *,
+  *::before,
+  *::after {
+    border-radius: 0px !important;
+    /* Profundidad por lineas capilares, nunca por sombra difusa. */
+    box-shadow: none !important;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 88px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  body {
+    color: var(--famesa-ink);
+    background-color: #ffffff;
+    font-family: var(--font-inter), "Inter", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-barlow), "Barlow Condensed", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 700;
+  }
+
+  /* Foco de teclado visible y ortogonal (accesibilidad industrial) */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--famesa-electric);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--famesa-electric);
+    color: #ffffff;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Retícula técnica milimétrica (blueprint de taller)                  */
+/* ------------------------------------------------------------------ */
+.technical-grid {
+  background-image: radial-gradient(#c8d2e0 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.technical-grid-dark {
+  background-image: radial-gradient(rgba(200, 210, 224, 0.18) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.technical-grid-fine {
+  background-image: linear-gradient(to right, rgba(200, 210, 224, 0.55) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(200, 210, 224, 0.55) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Lineas divisorias de precision                                      */
+/* ------------------------------------------------------------------ */
+.border-precision {
+  border: 1px solid #e5e5e5;
+}
+
+.border-precision-dark {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+/* Etiqueta tecnica monoespaciada sobre imagen o panel */
+.tech-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Numero de figura / referencia de plano */
+.tech-stamp {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ */
+/* Botones industriales (inversion tonal instantanea, sin redondeos)   */
+/* ------------------------------------------------------------------ */
+.btn-industrial-primary,
+.btn-industrial-secondary,
+.btn-industrial-orange {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 0.85rem 1.5rem;
+  font-family: var(--font-barlow), "Barlow Condensed", sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out;
+}
+
+.btn-industrial-primary {
+  background-color: #00299f;
+  color: #ffffff;
+  border-color: #00299f;
+}
+
+.btn-industrial-primary:hover {
+  background-color: #003ad7;
+  border-color: #003ad7;
+}
+
+.btn-industrial-secondary {
+  background-color: transparent;
+  color: #0a1a3a;
+  border-color: #0a1a3a;
+}
+
+.btn-industrial-secondary:hover {
+  background-color: #0a1a3a;
+  color: #ffffff;
+}
+
+.btn-industrial-orange {
+  background-color: #ff8a1f;
+  color: #0a1a3a;
+  border-color: #ff8a1f;
+}
+
+.btn-industrial-orange:hover {
+  background-color: #e67512;
+  border-color: #e67512;
+  color: #ffffff;
+}
+
+.btn-industrial-primary:disabled,
+.btn-industrial-secondary:disabled,
+.btn-industrial-orange:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Rejilla deBlueprint bajo laografia fotografica */
+.photo-blueprint {
+  position: relative;
+}
+
+.photo-blueprint::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(to right, rgba(10, 26, 58, 0.28) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(10, 26, 58, 0.28) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mix-blend-mode: multiply;
+}

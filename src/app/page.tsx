@@ -789,7 +789,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
             {filteredServices.map((s, i) => (
               <article
                 key={s.id}
-                className="card rv"
+                className="card card-service"
                 style={{ ["--i" as string]: (i % 3).toString() }}
               >
                 <div className="im" style={{ position: "relative" }}>
@@ -852,7 +852,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
             ))}
 
             {/* Featured Blue Card */}
-            <article className="card rv" style={{ ["--i" as string]: "2" }}>
+            <article className="card card-service" style={{ ["--i" as string]: "2" }}>
               <div
                 className="bd"
                 style={{

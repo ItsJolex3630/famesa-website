@@ -799,6 +799,22 @@ footer a {
   transform: none;
 }
 
+/* Animación suave para tarjetas de servicios filtradas dinámicamente */
+@keyframes serviceFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-service {
+  animation: serviceFadeIn 280ms var(--eo) both;
+}
+
 .hero .w > * {
   animation: hi 700ms var(--eo) both;
 }

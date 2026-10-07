@@ -123,7 +123,7 @@ export const URGENCY_LEVELS = [
   {
     value: "prioridad",
     label: "Prioritario",
-    detail: "5 a 7 días hábiles ·pieza внеcula al resto de la cola",
+    detail: "5 a 7 días hábiles · pieza prioritaria al resto de la cola",
   },
   {
     value: "emergencia_parada",

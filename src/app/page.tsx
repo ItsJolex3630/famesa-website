@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, FormEvent } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 import {
   Phone,
@@ -91,6 +92,42 @@ const services = [
     tolerance: "ASME / AWS D1.1",
   },
 ];
+
+// Mapa de servicios del formulario -> enum validado por RFQFormSchema en el servidor.
+const SERVICE_TYPE_BY_CATEGORY: Record<string, string> = {
+  metalmecanica: "fabricacion_engranajes",
+  plasticos: "plasticos_ingenieria",
+  recuperacion: "reparacion_reductores",
+  soldadura: "soldadura_especial",
+};
+
+const SERVICE_TYPE_BY_TITLE: Record<string, string> = {
+  "Piezas fabricadas desde cero": "mecanizado_cnc",
+  "Reparación urgente de reductor": "reparacion_reductores",
+  "Emergencia / Asistencia Técnica": "reparacion_reductores",
+  "Otro requerimiento": "otro",
+};
+
+function resolveServiceType(serviceTitle: string): string {
+  const byTitle = SERVICE_TYPE_BY_TITLE[serviceTitle];
+  if (byTitle) return byTitle;
+  const byCategory = services.find((s) => s.title === serviceTitle);
+  if (byCategory) return SERVICE_TYPE_BY_CATEGORY[byCategory.category] ?? "otro";
+  // "Pieza catálogo: <nombre>" y valores libres equivalentes.
+  return serviceTitle.startsWith("Pieza catálogo:") ? "mecanizado_cnc" : "otro";
+}
+
+// Servicios extras que no viven en el catálogo `services` pero sí son seleccionables.
+const EXTRA_SERVICE_OPTIONS = [
+  "Piezas fabricadas desde cero",
+  "Reparación urgente de reductor",
+  "Emergencia / Asistencia Técnica",
+  "Otro requerimiento",
+];
+
+const isSelectableService = (title: string) =>
+  services.some((s) => s.title === title) || EXTRA_SERVICE_OPTIONS.includes(title);
+
 
 // 2. DATA: Catálogo técnico de piezas
 const partsCatalog = [
@@ -350,9 +387,13 @@ export default function HomePage() {
   // RFQ Builder Form states
   const [formName, setFormName] = useState("");
   const [formService, setFormService] = useState("Fabricación y rectificado de rodillos");
-  const [formUrgency, setFormUrgency] = useState<"estandar" | "prioritario" | "emergencia">("estandar");
+  const [formUrgency, setFormUrgency] = useState<
+    "estandar" | "prioridad" | "emergencia_parada"
+  >("estandar");
   const [formQuantity, setFormQuantity] = useState(1);
   const [formMaterial, setFormMaterial] = useState("Acero 1045");
+  const [formEmail, setFormEmail] = useState("");
+  const [formPhone, setFormPhone] = useState("");
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -516,14 +557,16 @@ export default function HomePage() {
   // WhatsApp formatted message generator
   const urgencyLabel = {
     estandar: "Estándar (Planificado)",
-    prioritario: "Prioritario (3-5 días)",
-    emergencia: "PARADA DE EMERGENCIA 24/7 (Inmediata)",
+    prioridad: "Prioritario (3-5 días)",
+    emergencia_parada: "PARADA DE EMERGENCIA 24/7 (Inmediata)",
   }[formUrgency];
 
   const getWhatsAppMessageText = () => {
+    const contact = [formEmail.trim(), formPhone.trim()].filter(Boolean).join(" · ");
     return `*SOLICITUD DE COTIZACIÓN [${rfqTrackingId}]*
 ----------------------------------------
 *Cliente / Empresa:* ${formName.trim() || "[Por indicar]"}
+*Contacto:* ${contact || "[Indicar en el chat]"}
 *Servicio requerido:* ${formService}
 *Nivel de Urgencia:* ${urgencyLabel}
 *Cantidad estimada:* ${formQuantity} unidad(es)
@@ -539,6 +582,16 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
       setFormError("Por favor indica tu nombre o empresa.");
       return;
     }
+    const email = formEmail.trim();
+    const phone = formPhone.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFormError("Indica un correo electrónico válido para poder responderte.");
+      return;
+    }
+    if (!phone || (phone.match(/\d/g)?.length ?? 0) < 8) {
+      setFormError("Indica un teléfono de contacto con al menos 8 dígitos.");
+      return;
+    }
     if (!formMessage.trim()) {
       setFormError("Por favor descríbenos brevemente la pieza o falla que necesitas solucionar.");
       return;
@@ -549,7 +602,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
     const waText = getWhatsAppMessageText();
     const targetUrl = `${WA_BASE}?text=${encodeURIComponent(waText)}`;
 
-    // Optional background log to serverless endpoint
+    // Registro en el endpoint serverless (log de seguimiento RFQ, no bloquea el envío).
     try {
       fetch("/api/quote", {
         method: "POST",
@@ -557,13 +610,19 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
         body: JSON.stringify({
           fullName: formName.trim(),
           companyName: formName.trim(),
-          email: "contacto@famesa.com",
-          phone: "+584143410187",
-          serviceType: "mecanizado_cnc",
+          email,
+          phone,
+          serviceType: resolveServiceType(formService),
           urgency: formUrgency,
           specifications: formMessage.trim(),
         }),
-      }).catch(() => {});
+      }).then(async (res) => {
+        if (!res.ok) {
+          console.warn(`[/api/quote] ${res.status} ${await res.text()}`);
+        }
+      }).catch((err) => {
+        console.warn("[/api/quote] sin respuesta:", err);
+      });
     } catch {}
 
     toast.success("Abriendo WhatsApp con tu requerimiento técnico estructurado...");
@@ -587,6 +646,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
 
   return (
     <>
+      <header>
       {/* 1. TOP ANNOUNCEMENT & STATUS RIBBON */}
       <div className="top-ribbon">
         <div className="w">
@@ -630,7 +690,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
       <nav className={scrolled ? "sc" : ""}>
         <div className="w">
           <a href="#top" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
-            <img src="/images/logo.jpg" alt="Famesa C.A." />
+            <Image src="/images/logo.jpg" alt="Famesa C.A." width={520} height={305} priority />
           </a>
 
           <div className="nl">
@@ -695,6 +755,9 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
           </a>
         </div>
       </nav>
+      </header>
+
+      <main>
 
       {/* 3. HERO MONUMENTAL CON ENGRANAJE INTERACTIVO Y CHISPAS */}
       <header
@@ -851,10 +914,12 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
               >
                 <div className="im" style={{ position: "relative", cursor: "pointer" }} onClick={() => openServiceModal(s)}>
                   <span className="lab">Inspección Disponible</span>
-                  <img
-                    loading="lazy"
+                  <Image
                     src={s.img}
                     alt={s.title}
+                    width={1264}
+                    height={848}
+                    sizes="(min-width: 860px) 33vw, 100vw"
                   />
                   <div
                     style={{
@@ -922,7 +987,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
                   justifyContent: "center",
                 }}
               >
-                <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, color: "var(--or)" }}>
+                <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, color: "var(--or-on-blue)" }}>
                   Asistencia Inmediata
                 </span>
                 <h3 style={{ fontSize: "28px" }}>Fabricación, reparación y asistencia técnica</h3>
@@ -1070,10 +1135,13 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
           </div>
 
           <div style={{ position: "relative" }}>
-            <img
+            <Image
               alt="Piezas metálicas y engranajes fabricados por Famesa"
               className="pic rv"
               src="/images/piezas-cero.jpg"
+              width={1264}
+              height={848}
+              sizes="(min-width: 860px) 50vw, 100vw"
               style={{ ["--i" as string]: "2" }}
               onClick={() => openLightboxByIndex(2)}
               title="Clic para ampliar foto de piezas"
@@ -1270,20 +1338,26 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
 
           <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))" }}>
             <figure className="fg">
-              <img
+              <Image
                 alt="Técnico de Famesa rectificando un rodillo industrial"
                 className="pic rv"
                 src="/images/taller-rectificado.jpg"
+                width={1264}
+                height={848}
+                sizes="(min-width: 860px) 50vw, 100vw"
                 onClick={() => openLightboxByIndex(0)}
               />
               <figcaption>Foto real · Taller Famesa</figcaption>
             </figure>
 
             <figure className="fg">
-              <img
+              <Image
                 alt="Rodillo industrial terminado con eje"
                 className="pic rv"
                 src="/images/taller-rodillo.jpg"
+                width={1264}
+                height={848}
+                sizes="(min-width: 860px) 50vw, 100vw"
                 style={{ ["--i" as string]: "2" }}
                 onClick={() => openLightboxByIndex(1)}
               />
@@ -1307,7 +1381,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
             {processSteps.map((step, idx) => (
               <div key={idx} style={{ transition: "transform 200ms ease" }}>
                 <b>{step.num}</b>
-                <h4 style={{ font: "700 18px var(--h)", margin: "8px 0 4px", textTransform: "uppercase" }}>{step.title}</h4>
+                <h3 style={{ font: "700 18px var(--h)", margin: "8px 0 4px", textTransform: "uppercase" }}>{step.title}</h3>
                 <p style={{ margin: 0, fontSize: "14px", color: "var(--mu)" }}>{step.text}</p>
               </div>
             ))}
@@ -1327,7 +1401,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
             {qualityPoints.map((q, idx) => (
               <div key={idx} className="rv" style={{ ["--i" as string]: idx.toString() }}>
                 <b>{q.num}</b>
-                <h4 style={{ font: "700 20px var(--h)", margin: "4px 0 6px", textTransform: "uppercase" }}>{q.title}</h4>
+                <h3 style={{ font: "700 20px var(--h)", margin: "4px 0 6px", textTransform: "uppercase" }}>{q.title}</h3>
                 <p style={{ margin: 0, fontSize: "14px", color: "var(--mu)" }}>{q.text}</p>
               </div>
             ))}
@@ -1467,6 +1541,33 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div>
+                <label htmlFor="em">Correo electrónico *</label>
+                <input
+                  autoComplete="email"
+                  id="em"
+                  type="email"
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
+                  placeholder="compras@empresa.com"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="tel">Teléfono de contacto *</label>
+                <input
+                  autoComplete="tel"
+                  id="tel"
+                  type="tel"
+                  value={formPhone}
+                  onChange={(e) => setFormPhone(e.target.value)}
+                  placeholder="+58 414 1234567"
+                  required
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div>
                 <label htmlFor="s">Servicio *</label>
                 <select
                   id="s"
@@ -1478,9 +1579,15 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
                       {s.title}
                     </option>
                   ))}
-                  <option value="Piezas fabricadas desde cero">Piezas fabricadas desde cero</option>
-                  <option value="Reparación urgente de reductor">Reparación urgente de reductor</option>
-                  <option value="Otro requerimiento">Otro requerimiento</option>
+                  {EXTRA_SERVICE_OPTIONS.map((title) => (
+                    <option key={title} value={title}>
+                      {title}
+                    </option>
+                  ))}
+                  {/* Valores preseleccionados desde fuera (ej. "Pieza catálogo: …") */}
+                  {!isSelectableService(formService) && (
+                    <option value={formService}>{formService}</option>
+                  )}
                 </select>
               </div>
 
@@ -1505,19 +1612,19 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
             <div>
               <label style={{ marginBottom: "6px", display: "block" }}>Prioridad de Planta *</label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
-                {[
+                {([
                   { id: "estandar", label: "Estándar", desc: "Planificado" },
-                  { id: "prioritario", label: "Prioritario", desc: "3-5 días" },
-                  { id: "emergencia", label: "Parada 24/7", desc: "Inmediata" },
-                ].map((u) => (
+                  { id: "prioridad", label: "Prioritario", desc: "3-5 días" },
+                  { id: "emergencia_parada", label: "Parada 24/7", desc: "Inmediata" },
+                ] as const).map((u) => (
                   <button
                     key={u.id}
                     type="button"
-                    onClick={() => setFormUrgency(u.id as any)}
+                    onClick={() => setFormUrgency(u.id)}
                     style={{
-                      background: formUrgency === u.id ? (u.id === "emergencia" ? "#dc2626" : "var(--bl)") : "#fff",
+                      background: formUrgency === u.id ? (u.id === "emergencia_parada" ? "#dc2626" : "var(--bl)") : "#fff",
                       color: formUrgency === u.id ? "#fff" : "var(--ink)",
-                      border: `1px solid ${formUrgency === u.id ? (u.id === "emergencia" ? "#dc2626" : "var(--bl)") : "var(--st2)"}`,
+                      border: `1px solid ${formUrgency === u.id ? (u.id === "emergencia_parada" ? "#dc2626" : "var(--bl)") : "var(--st2)"}`,
                       borderRadius: "10px",
                       padding: "8px 6px",
                       textAlign: "center",
@@ -1608,12 +1715,13 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
           </form>
         </div>
       </section>
+      </main>
 
       {/* 15. FOOTER INDUSTRIAL */}
       <footer>
         <div className="w">
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <img src="/images/logo.jpg" alt="Famesa C.A." />
+            <Image src="/images/logo.jpg" alt="Famesa C.A." width={520} height={305} />
             <span style={{ fontWeight: 600, color: "#fff" }}>Famesa C.A.</span>
           </div>
 
@@ -1634,6 +1742,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
       </footer>
 
       {/* 16. BOTÓN FLOTANTE WHATSAPP */}
+      <aside aria-label="Acciones rápidas">
       <a
         className="wf"
         href="https://wa.me/584143410187?text=Hola%20Famesa%2C%20quiero%20una%20cotizaci%C3%B3n"
@@ -1653,6 +1762,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
       >
         <ArrowUp size={20} />
       </button>
+      </aside>
 
       {/* 16. MODAL INTERACTIVO UNIFICADO: INSPECCIÓN TÉCNICA Y GALERÍA */}
       <dialog
@@ -1851,11 +1961,15 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
                 overflow: "hidden",
               }}
             >
-              <img
+              <Image
                 src={modalImageView === "detail" ? activeServiceModal.detailImg : activeServiceModal.img}
                 alt={activeServiceModal.title}
+                width={1264}
+                height={848}
+                sizes="(min-width: 860px) 80vw, 100vw"
                 style={{
                   width: "100%",
+                  height: "auto",
                   maxHeight: "50vh",
                   objectFit: "contain",
                   display: "block",
@@ -2033,11 +2147,15 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
                 minHeight: "240px",
               }}
             >
-              <img
+              <Image
                 src={galleryPhotos[lightboxIndex].src}
                 alt={galleryPhotos[lightboxIndex].title}
+                width={1264}
+                height={848}
+                sizes="90vw"
                 style={{
                   width: "100%",
+                  height: "auto",
                   maxHeight: "58vh",
                   objectFit: "contain",
                   display: "block",

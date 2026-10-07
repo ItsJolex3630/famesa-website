@@ -15,6 +15,8 @@
   --ink: #12203a;
   --mu: #5b6a85;
   --or: #ff8a1f;
+  /* Naranja legible sobre fondos azules (#1d4fb8): contraste 4.69:1 */
+  --or-on-blue: #ffc38a;
   --h: 'Barlow Condensed', sans-serif;
   --eo: cubic-bezier(0.23, 1, 0.32, 1);
   --ea: cubic-bezier(0.32, 0.72, 0, 1);
@@ -759,6 +761,7 @@ footer .w {
 
 footer img {
   height: 40px;
+  width: auto;
   background: #fff;
   border-radius: 8px;
   padding: 4px;

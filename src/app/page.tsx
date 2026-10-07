@@ -37,6 +37,9 @@ const services = [
     desc: "Rodillos motrices, de retorno, engomados y ranurados para bandas transportadoras, papeleras, siderúrgicas e industrias de procesos.",
     tags: ["Torno pesado", "Ranurado helicoidal", "Balanceo dinámico"],
     img: "/images/service-rod.jpg",
+    detailImg: "/images/service-rod-detail.jpg",
+    detailTitle: "Control Dimensional & Tolerancia en Torno Pesado",
+    detailDesc: "Verificación de concentricidad y tolerancia micrométrica (±0.015 mm) con comparador de carátula en rectificado de rodillo cilíndrico.",
     tolerance: "±0.015 mm",
   },
   {
@@ -46,6 +49,9 @@ const services = [
     desc: "Piezas en nylon, poliacetal (Delrin), teflón (PTFE), UHMW y polímeros industriales de alto desempeño.",
     tags: ["Torneado y fresado CNC", "Resistencia al desgaste"],
     img: "/images/service-pla.jpg",
+    detailImg: "/images/service-pla-detail.jpg",
+    detailTitle: "Mecanizado CNC con Fresa de Carburo en Poliacetal",
+    detailDesc: "Proceso de fresado y ranurado de alta precisión sobre bloque de Delrin virgen con refrigeración y control de viruta.",
     tolerance: "±0.02 mm",
   },
   {
@@ -55,6 +61,9 @@ const services = [
     desc: "Para líneas de llenado, envasado y tapado, en UHMW-PE, nylon, Delrin y teflón de grado alimenticio.",
     tags: ["CNC y ruteado", "Bajo coeficiente de fricción"],
     img: "/images/service-est.jpg",
+    detailImg: "/images/service-est-detail.jpg",
+    detailTitle: "Inspección Dimensional de Bolsillo para Botellas",
+    detailDesc: "Medición de radio y perfil curvo con calibrador vernier digital directamente sobre el plano de ingeniería para línea de envasado.",
     tolerance: "±0.05 mm",
   },
   {
@@ -64,6 +73,9 @@ const services = [
     desc: "Ingeniería y diagnóstico de precisión. Servicio técnico especializado y atención a emergencias 24/7.",
     tags: ["Preventivo y correctivo", "Emergencias 24/7"],
     img: "/images/service-red.jpg",
+    detailImg: "/images/service-red-detail.jpg",
+    detailTitle: "Alineación y Holgura de Dientes (Backlash)",
+    detailDesc: "Inspección de contacto de flancos, rodamientos cónicos y ajuste micrométrico de piñón y corona en reductor industrial.",
     tolerance: "Alineación micrométrica",
   },
   {
@@ -73,6 +85,9 @@ const services = [
     desc: "Soldaduras eléctricas autógenas, soldadura TIG (argón), estructuras metálicas, fabricación de tanques y metalizados.",
     tags: ["TIG (argón)", "Tanques", "Estructuras"],
     img: "/images/service-sol.jpg",
+    detailImg: "/images/service-sol-detail.jpg",
+    detailTitle: "Cordón TIG Especializado con Halo Térmico Controlado",
+    detailDesc: "Acabado tipo escama de pescado (stack of dimes) sobre tubería y brida de acero inoxidable bajo norma ASME Sec. IX.",
     tolerance: "ASME / AWS D1.1",
   },
 ];
@@ -277,23 +292,23 @@ const faqs = [
 const galleryPhotos = [
   {
     src: "/images/taller-rectificado.jpg",
-    title: "Rectificado de rodillo industrial en torno pesado",
-    caption: "Técnico especialista de Famesa en proceso de rectificado de precisión sobre rodillo cilíndrico.",
+    title: "Mecanizado de precisión en torno industrial pesado",
+    caption: "Torno paralelo de gran capacidad en desbaste y acabado superficial de piezas cilíndricas en taller Famesa.",
   },
   {
     src: "/images/taller-rodillo.jpg",
-    title: "Rodillo industrial terminado con eje montado",
-    caption: "Rodillo pesado con acabado pulido y montaje de muñones verificado para planta papelera.",
+    title: "Inspección de calidad y concentricidad en bloque en V",
+    caption: "Control de calidad dimensional con reloj comparador sobre rodillo pesado terminado con muñones y eje rectificado.",
   },
   {
     src: "/images/piezas-cero.jpg",
-    title: "Lote de engranajes, piñones y bujes técnicos",
-    caption: "Muestras de mecanizado en aceros tratados y bronces fosfóricos fabricados desde cero.",
+    title: "Lote de componentes especiales fabricados desde cero",
+    caption: "Ejes estriados tratados, bujes en bronce fosfórico SAE 64, piñones y anillos Delrin sobre plano técnico.",
   },
   {
     src: "/images/service-rod.jpg",
-    title: "Fabricación de rodillos con ranurado helicoidal",
-    caption: "Inspección dimensional previa a entrega para banda transportadora de alta exigencia.",
+    title: "Rectificado y acabado de rodillos industriales",
+    caption: "Montaje sobre plato de torno con chispas de mecanizado de precisión en planta Santa Rosa, Valencia.",
   },
 ];
 
@@ -327,6 +342,10 @@ export default function HomePage() {
 
   // Services Filter state
   const [serviceFilter, setServiceFilter] = useState<"todos" | "metalmecanica" | "plasticos" | "soldadura" | "recuperacion">("todos");
+
+  // Modal de Inspección Técnica de Servicio
+  const [activeServiceModal, setActiveServiceModal] = useState<typeof services[0] | null>(null);
+  const [modalImageView, setModalImageView] = useState<"detail" | "card">("detail");
 
   // RFQ Builder Form states
   const [formName, setFormName] = useState("");
@@ -433,6 +452,20 @@ export default function HomePage() {
 
   const prevLightbox = () => {
     setLightboxIndex((curr) => (curr !== null ? (curr - 1 + galleryPhotos.length) % galleryPhotos.length : null));
+  };
+
+  // Modal de Inspección Técnica de Servicio
+  const openServiceModal = (service: typeof services[0]) => {
+    setActiveServiceModal(service);
+    setModalImageView("detail");
+    setLightboxIndex(null);
+    if (dialogRef.current) dialogRef.current.showModal();
+  };
+
+  const closeAllModals = () => {
+    if (dialogRef.current) dialogRef.current.close();
+    setLightboxIndex(null);
+    setActiveServiceModal(null);
   };
 
   // Scroll to section helper
@@ -792,29 +825,33 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
                 className="card card-service"
                 style={{ ["--i" as string]: (i % 3).toString() }}
               >
-                <div className="im" style={{ position: "relative" }}>
-                  <span className="lab">Ilustración</span>
+                <div className="im" style={{ position: "relative", cursor: "pointer" }} onClick={() => openServiceModal(s)}>
+                  <span className="lab">Inspección Disponible</span>
                   <img
                     loading="lazy"
                     src={s.img}
                     alt={s.title}
-                    onClick={() => openLightboxByIndex(i % galleryPhotos.length)}
                   />
                   <div
                     style={{
                       position: "absolute",
                       bottom: "10px",
                       right: "10px",
-                      background: "rgba(10,26,58,0.85)",
+                      background: "rgba(10, 26, 58, 0.85)",
                       color: "#fff",
                       fontSize: "11px",
                       fontWeight: 700,
-                      padding: "2px 8px",
+                      padding: "4px 8px",
                       borderRadius: "6px",
-                      zIndex: 3,
+                      backdropFilter: "blur(4px)",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
                     }}
                   >
-                    Tol: {s.tolerance}
+                    <Maximize2 size={12} />
+                    Ver inspección
                   </div>
                 </div>
 
@@ -1593,14 +1630,133 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
         <ArrowUp size={20} />
       </button>
 
-      {/* 18. MODAL LIGHTBOX FULLSCREEN CON CONTROLES */}
+      {/* 16. MODAL INTERACTIVO UNIFICADO: INSPECCIÓN TÉCNICA Y GALERÍA */}
       <dialog
-        ref={dialogRef}
         id="lb"
-        aria-label="Imagen ampliada del taller Famesa"
-        onClick={closeLightbox}
+        ref={dialogRef}
+        aria-label="Inspección técnica detallada Famesa"
+        onClick={closeAllModals}
       >
-        {lightboxIndex !== null && (
+        {activeServiceModal ? (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              maxWidth: "min(94vw, 980px)",
+              margin: "0 auto",
+              background: "#06112a",
+              borderRadius: "18px",
+              overflow: "hidden",
+              border: "1px solid rgba(255,255,255,0.15)",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
+            }}
+          >
+            {/* Header del Modal */}
+            <div style={{ padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", background: "rgba(10,26,58,0.7)" }}>
+              <div>
+                <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--or)", fontWeight: 700 }}>
+                  Inspección Técnica de Servicio
+                </span>
+                <h3 style={{ font: "700 22px var(--h)", margin: "2px 0 0", color: "#fff", textTransform: "uppercase" }}>
+                  {activeServiceModal.title}
+                </h3>
+              </div>
+              <button
+                onClick={closeAllModals}
+                style={{
+                  background: "rgba(255,255,255,0.1)",
+                  border: "none",
+                  color: "#fff",
+                  borderRadius: "50%",
+                  width: "36px",
+                  height: "36px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Imagen Principal con Switcher */}
+            <div style={{ position: "relative", background: "#020714" }}>
+              <img
+                src={modalImageView === "detail" ? activeServiceModal.detailImg : activeServiceModal.img}
+                alt={activeServiceModal.title}
+                style={{ width: "100%", maxHeight: "60vh", objectFit: "contain", display: "block" }}
+              />
+
+              {/* Botones de alternancia de vista */}
+              <div style={{ position: "absolute", top: "14px", left: "14px", display: "flex", gap: "8px" }}>
+                <button
+                  onClick={() => setModalImageView("detail")}
+                  style={{
+                    background: modalImageView === "detail" ? "var(--or)" : "rgba(10,26,58,0.85)",
+                    color: modalImageView === "detail" ? "#0a1a3a" : "#fff",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: "99px",
+                    padding: "6px 14px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    backdropFilter: "blur(6px)",
+                  }}
+                >
+                  Inspección Micrométrica (Macro)
+                </button>
+                <button
+                  onClick={() => setModalImageView("card")}
+                  style={{
+                    background: modalImageView === "card" ? "var(--or)" : "rgba(10,26,58,0.85)",
+                    color: modalImageView === "card" ? "#0a1a3a" : "#fff",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: "99px",
+                    padding: "6px 14px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    backdropFilter: "blur(6px)",
+                  }}
+                >
+                  Vista General de Fabricación
+                </button>
+              </div>
+            </div>
+
+            {/* Footer con especificaciones y CTA */}
+            <div style={{ padding: "18px 24px", background: "rgba(10,26,58,0.9)", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px" }}>
+                <div style={{ maxWidth: "600px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "12px", background: "rgba(29, 79, 184, 0.4)", color: "#a5c2f7", padding: "2px 8px", borderRadius: "4px", fontWeight: 700 }}>
+                      Tolerancia: {activeServiceModal.tolerance}
+                    </span>
+                    <strong style={{ fontSize: "14px", color: "#fff" }}>
+                      {modalImageView === "detail" ? activeServiceModal.detailTitle : "Fabricación & Montaje"}
+                    </strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: "13px", color: "rgba(255,255,255,0.75)", lineHeight: "1.4" }}>
+                    {modalImageView === "detail" ? activeServiceModal.detailDesc : activeServiceModal.desc}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    closeAllModals();
+                    selectServiceForQuote(activeServiceModal.title);
+                  }}
+                  className="btn bp"
+                  style={{ borderRadius: "8px", padding: "10px 20px", fontSize: "13px" }}
+                >
+                  Cotizar este servicio ahora
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : lightboxIndex !== null ? (
+          /* Vista de Galería General */
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
@@ -1621,7 +1777,6 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
                 style={{ width: "100%", maxHeight: "75vh", objectFit: "contain", display: "block" }}
               />
 
-              {/* Prev / Next controls */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1669,18 +1824,18 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
                   justifyContent: "center",
                   cursor: "pointer",
                 }}
-                aria-label="Siguiente foto"
+                aria-label="Foto siguiente"
               >
                 <ChevronRight size={24} />
               </button>
 
               <button
-                onClick={closeLightbox}
+                onClick={closeAllModals}
                 style={{
                   position: "absolute",
                   top: "14px",
                   right: "14px",
-                  background: "rgba(10,26,58,0.8)",
+                  background: "rgba(10,26,58,0.75)",
                   color: "#fff",
                   border: "1px solid rgba(255,255,255,0.3)",
                   borderRadius: "50%",
@@ -1691,27 +1846,27 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
                   justifyContent: "center",
                   cursor: "pointer",
                 }}
-                aria-label="Cerrar modal"
+                aria-label="Cerrar visor"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", background: "#06112a", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-              <div>
-                <h4 style={{ margin: "0 0 4px", color: "#fff", font: "700 18px var(--h)", textTransform: "uppercase" }}>
+            <div style={{ padding: "16px 22px", background: "rgba(10,26,58,0.9)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                <h3 style={{ font: "700 20px var(--h)", margin: 0, color: "#fff", textTransform: "uppercase" }}>
                   {galleryPhotos[lightboxIndex].title}
-                </h4>
-                <p style={{ margin: 0, fontSize: "13px", color: "#94a3b8" }}>
-                  {galleryPhotos[lightboxIndex].caption}
-                </p>
+                </h3>
+                <span style={{ fontSize: "12px", color: "var(--or)", fontWeight: 600 }}>
+                  {lightboxIndex + 1} de {galleryPhotos.length}
+                </span>
               </div>
-              <span style={{ fontSize: "12px", background: "rgba(255,255,255,0.1)", color: "#fff", padding: "4px 10px", borderRadius: "99px", fontWeight: 700 }}>
-                {lightboxIndex + 1} de {galleryPhotos.length}
-              </span>
+              <p style={{ margin: 0, fontSize: "14px", color: "rgba(255,255,255,0.8)" }}>
+                {galleryPhotos[lightboxIndex].caption}
+              </p>
             </div>
           </div>
-        )}
+        ) : null}
       </dialog>
     </>
   );

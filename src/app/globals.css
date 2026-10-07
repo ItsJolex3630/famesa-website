@@ -842,24 +842,45 @@ footer a {
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* DIÁLOGO / MODAL UNIFICADO (INSPECCIÓN TÉCNICA Y GALERÍA DE TALLER)        */
+/* -------------------------------------------------------------------------- */
 dialog#lb {
   border: 0;
-  padding: 0;
+  padding: 16px;
   background: transparent;
-  max-width: min(92vw, 900px);
+  max-width: min(96vw, 980px);
+  width: 100%;
+  max-height: 96vh;
+  max-height: 96dvh;
+  overflow-y: auto;
+  outline: none;
+  box-sizing: border-box;
 }
 
 dialog#lb::backdrop {
-  background: rgba(10, 10, 10, 0.82);
-  backdrop-filter: blur(6px);
+  background: rgba(4, 10, 24, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 #lb img {
   width: 100%;
-  max-height: 86vh;
+  height: auto;
+  max-height: 52vh;
   object-fit: contain;
   display: block;
-  border-radius: 18px;
+  border-radius: 0;
+}
+
+@media (max-width: 640px) {
+  dialog#lb {
+    padding: 8px;
+    max-height: 98dvh;
+  }
+  #lb img {
+    max-height: 42vh;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -404,13 +404,13 @@ export default function HomePage() {
       if (el) sectionObserver.observe(el);
     });
 
-    // Keyboard navigation for lightbox
+    // Keyboard navigation for lightbox & service modals
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeAllModals();
+        return;
+      }
       if (lightboxIndex !== null) {
-        if (e.key === "Escape") {
-          if (dialogRef.current) dialogRef.current.close();
-          setLightboxIndex(null);
-        }
         if (e.key === "ArrowRight") {
           setLightboxIndex((curr) => (curr !== null ? (curr + 1) % galleryPhotos.length : null));
         }
@@ -435,15 +435,35 @@ export default function HomePage() {
     toast.success(`¡${label} copiado al portapapeles!`);
   };
 
-  // Lightbox handlers
+  // Helper para etiqueta técnica contextual por servicio
+  const getServiceTabLabel = (service: typeof services[0]) => {
+    switch (service.id) {
+      case "rod":
+        return "Inspección Micrométrica & Runout";
+      case "pla":
+        return "Fresado CNC & Acabado Poliacetal";
+      case "est":
+        return "Inspección Vernier & Plano";
+      case "red":
+        return "Alineación & Holgura (Backlash)";
+      case "sol":
+        return "Inspección Macroscópica & Norma ASME";
+      default:
+        return "Detalle Técnico Macro & Tolerancia";
+    }
+  };
+
+  // Lightbox handlers sincronizados
   const openLightboxByIndex = (index: number) => {
+    setActiveServiceModal(null);
     setLightboxIndex(index);
-    if (dialogRef.current) dialogRef.current.showModal();
+    if (dialogRef.current && !dialogRef.current.open) {
+      dialogRef.current.showModal();
+    }
   };
 
   const closeLightbox = () => {
-    if (dialogRef.current) dialogRef.current.close();
-    setLightboxIndex(null);
+    closeAllModals();
   };
 
   const nextLightbox = () => {
@@ -454,16 +474,20 @@ export default function HomePage() {
     setLightboxIndex((curr) => (curr !== null ? (curr - 1 + galleryPhotos.length) % galleryPhotos.length : null));
   };
 
-  // Modal de Inspección Técnica de Servicio
+  // Modal de Inspección Técnica de Servicio sincronizado
   const openServiceModal = (service: typeof services[0]) => {
+    setLightboxIndex(null);
     setActiveServiceModal(service);
     setModalImageView("detail");
-    setLightboxIndex(null);
-    if (dialogRef.current) dialogRef.current.showModal();
+    if (dialogRef.current && !dialogRef.current.open) {
+      dialogRef.current.showModal();
+    }
   };
 
   const closeAllModals = () => {
-    if (dialogRef.current) dialogRef.current.close();
+    if (dialogRef.current && dialogRef.current.open) {
+      dialogRef.current.close();
+    }
     setLightboxIndex(null);
     setActiveServiceModal(null);
   };
@@ -1634,234 +1658,470 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
       <dialog
         id="lb"
         ref={dialogRef}
-        aria-label="Inspección técnica detallada Famesa"
-        onClick={closeAllModals}
+        aria-label={
+          activeServiceModal
+            ? `Inspección técnica detallada: ${activeServiceModal.title}`
+            : lightboxIndex !== null && galleryPhotos[lightboxIndex]
+            ? `Galería fotográfica de taller: ${galleryPhotos[lightboxIndex].title}`
+            : "Inspección técnica y visor fotográfico Famesa C.A."
+        }
+        onCancel={(e) => {
+          e.preventDefault();
+          closeAllModals();
+        }}
+        onClick={(e) => {
+          if (e.target === dialogRef.current) {
+            closeAllModals();
+          }
+        }}
       >
         {activeServiceModal ? (
+          /* ========================================================= */
+          /* VISTA A: INSPECCIÓN TÉCNICA DETALLADA DE SERVICIO         */
+          /* ========================================================= */
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
               position: "relative",
-              maxWidth: "min(94vw, 980px)",
+              width: "100%",
               margin: "0 auto",
               background: "#06112a",
-              borderRadius: "18px",
+              borderRadius: "14px",
               overflow: "hidden",
-              border: "1px solid rgba(255,255,255,0.15)",
-              boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              boxShadow: "0 28px 70px rgba(0,0,0,0.8)",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             {/* Header del Modal */}
-            <div style={{ padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", background: "rgba(10,26,58,0.7)" }}>
-              <div>
-                <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--or)", fontWeight: 700 }}>
+            <div
+              style={{
+                padding: "14px 20px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(10,26,58,0.85)",
+              }}
+            >
+              <div style={{ paddingRight: "12px" }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    color: "var(--or)",
+                    fontWeight: 700,
+                    display: "block",
+                  }}
+                >
                   Inspección Técnica de Servicio
                 </span>
-                <h3 style={{ font: "700 22px var(--h)", margin: "2px 0 0", color: "#fff", textTransform: "uppercase" }}>
+                <h3
+                  style={{
+                    font: "700 clamp(16px, 3.5vw, 22px) var(--h)",
+                    margin: "2px 0 0",
+                    color: "#fff",
+                    textTransform: "uppercase",
+                    lineHeight: "1.2",
+                  }}
+                >
                   {activeServiceModal.title}
                 </h3>
               </div>
               <button
                 onClick={closeAllModals}
+                aria-label="Cerrar modal"
                 style={{
                   background: "rgba(255,255,255,0.1)",
-                  border: "none",
+                  border: "1px solid rgba(255,255,255,0.2)",
                   color: "#fff",
                   borderRadius: "50%",
                   width: "36px",
                   height: "36px",
+                  minWidth: "36px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
+                  transition: "background 150ms ease",
                 }}
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Imagen Principal con Switcher */}
-            <div style={{ position: "relative", background: "#020714" }}>
+            {/* Barra de Alternancia de Vistas (DESACOPLADA - NO TAPA LA IMAGEN) */}
+            <div
+              role="tablist"
+              aria-label="Modos de inspección técnica"
+              style={{
+                padding: "10px 20px",
+                background: "rgba(6, 17, 42, 0.95)",
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "rgba(255,255,255,0.6)",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                  marginRight: "4px",
+                }}
+              >
+                Modo de vista:
+              </span>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={modalImageView === "detail"}
+                onClick={() => setModalImageView("detail")}
+                style={{
+                  background: modalImageView === "detail" ? "var(--or)" : "rgba(255,255,255,0.06)",
+                  color: modalImageView === "detail" ? "#0a1a3a" : "#fff",
+                  border: modalImageView === "detail" ? "1px solid var(--or)" : "1px solid rgba(255,255,255,0.18)",
+                  borderRadius: "6px",
+                  padding: "6px 12px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 150ms ease",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <span
+                  style={{
+                    width: "7px",
+                    height: "7px",
+                    borderRadius: "50%",
+                    background: modalImageView === "detail" ? "#0a1a3a" : "var(--or)",
+                  }}
+                />
+                {getServiceTabLabel(activeServiceModal)}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={modalImageView === "card"}
+                onClick={() => setModalImageView("card")}
+                style={{
+                  background: modalImageView === "card" ? "var(--or)" : "rgba(255,255,255,0.06)",
+                  color: modalImageView === "card" ? "#0a1a3a" : "#fff",
+                  border: modalImageView === "card" ? "1px solid var(--or)" : "1px solid rgba(255,255,255,0.18)",
+                  borderRadius: "6px",
+                  padding: "6px 12px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 150ms ease",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <span
+                  style={{
+                    width: "7px",
+                    height: "7px",
+                    borderRadius: "50%",
+                    background: modalImageView === "card" ? "#0a1a3a" : "#a5c2f7",
+                  }}
+                />
+                Vista General de Fabricación
+              </button>
+            </div>
+
+            {/* Imagen Principal (Limpia y Centrada) */}
+            <div
+              style={{
+                position: "relative",
+                background: "#020714",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: "220px",
+                overflow: "hidden",
+              }}
+            >
               <img
                 src={modalImageView === "detail" ? activeServiceModal.detailImg : activeServiceModal.img}
                 alt={activeServiceModal.title}
-                style={{ width: "100%", maxHeight: "60vh", objectFit: "contain", display: "block" }}
+                style={{
+                  width: "100%",
+                  maxHeight: "50vh",
+                  objectFit: "contain",
+                  display: "block",
+                }}
               />
-
-              {/* Botones de alternancia de vista */}
-              <div style={{ position: "absolute", top: "14px", left: "14px", display: "flex", gap: "8px" }}>
-                <button
-                  onClick={() => setModalImageView("detail")}
-                  style={{
-                    background: modalImageView === "detail" ? "var(--or)" : "rgba(10,26,58,0.85)",
-                    color: modalImageView === "detail" ? "#0a1a3a" : "#fff",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: "99px",
-                    padding: "6px 14px",
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    backdropFilter: "blur(6px)",
-                  }}
-                >
-                  Inspección Micrométrica (Macro)
-                </button>
-                <button
-                  onClick={() => setModalImageView("card")}
-                  style={{
-                    background: modalImageView === "card" ? "var(--or)" : "rgba(10,26,58,0.85)",
-                    color: modalImageView === "card" ? "#0a1a3a" : "#fff",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: "99px",
-                    padding: "6px 14px",
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    backdropFilter: "blur(6px)",
-                  }}
-                >
-                  Vista General de Fabricación
-                </button>
-              </div>
             </div>
 
-            {/* Footer con especificaciones y CTA */}
-            <div style={{ padding: "18px 24px", background: "rgba(10,26,58,0.9)", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px" }}>
-                <div style={{ maxWidth: "600px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "12px", background: "rgba(29, 79, 184, 0.4)", color: "#a5c2f7", padding: "2px 8px", borderRadius: "4px", fontWeight: 700 }}>
-                      Tolerancia: {activeServiceModal.tolerance}
-                    </span>
-                    <strong style={{ fontSize: "14px", color: "#fff" }}>
-                      {modalImageView === "detail" ? activeServiceModal.detailTitle : "Fabricación & Montaje"}
+            {/* Footer con especificaciones técnicas y CTA (100% visible con scroll seguro) */}
+            <div
+              style={{
+                padding: "16px 20px",
+                background: "rgba(10,26,58,0.95)",
+                borderTop: "1px solid rgba(255,255,255,0.12)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "14px",
+                }}
+              >
+                <div style={{ flex: "1 1 320px", minWidth: "260px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "6px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {modalImageView === "detail" ? (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          background: "rgba(29, 79, 184, 0.4)",
+                          color: "#a5c2f7",
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          fontWeight: 700,
+                          border: "1px solid rgba(29, 79, 184, 0.6)",
+                        }}
+                      >
+                        Tolerancia: {activeServiceModal.tolerance}
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          background: "rgba(255, 138, 31, 0.2)",
+                          color: "#ff8a1f",
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          fontWeight: 700,
+                          border: "1px solid rgba(255, 138, 31, 0.4)",
+                        }}
+                      >
+                        Proceso de Planta Famesa
+                      </span>
+                    )}
+                    <strong style={{ fontSize: "14px", color: "#fff", letterSpacing: "0.01em" }}>
+                      {modalImageView === "detail" ? activeServiceModal.detailTitle : "Fabricación & Montaje en Planta"}
                     </strong>
                   </div>
-                  <p style={{ margin: 0, fontSize: "13px", color: "rgba(255,255,255,0.75)", lineHeight: "1.4" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "13px",
+                      color: "rgba(255,255,255,0.8)",
+                      lineHeight: "1.45",
+                    }}
+                  >
                     {modalImageView === "detail" ? activeServiceModal.detailDesc : activeServiceModal.desc}
                   </p>
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => {
                     closeAllModals();
                     selectServiceForQuote(activeServiceModal.title);
                   }}
                   className="btn bp"
-                  style={{ borderRadius: "8px", padding: "10px 20px", fontSize: "13px" }}
+                  style={{
+                    borderRadius: "8px",
+                    padding: "10px 22px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                  }}
                 >
                   Cotizar este servicio ahora
                 </button>
               </div>
             </div>
           </div>
-        ) : lightboxIndex !== null ? (
-          /* Vista de Galería General */
+        ) : lightboxIndex !== null && galleryPhotos[lightboxIndex] ? (
+          /* ========================================================= */
+          /* VISTA B: VISOR DE FOTOGRAFÍAS REALES DEL TALLER Y PIEZAS  */
+          /* ========================================================= */
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
               position: "relative",
-              maxWidth: "min(92vw, 960px)",
+              width: "100%",
               margin: "0 auto",
               background: "#06112a",
-              borderRadius: "18px",
+              borderRadius: "14px",
               overflow: "hidden",
-              border: "1px solid rgba(255,255,255,0.15)",
-              boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              boxShadow: "0 28px 70px rgba(0,0,0,0.8)",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <div style={{ position: "relative" }}>
+            {/* Cabecera / Barra superior de la Galería */}
+            <div
+              style={{
+                padding: "12px 18px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                background: "rgba(10,26,58,0.85)",
+                borderBottom: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    color: "var(--or)",
+                    fontWeight: 700,
+                  }}
+                >
+                  Fotografía Real · Taller Famesa
+                </span>
+                <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.6)", marginLeft: "10px" }}>
+                  ({lightboxIndex + 1} de {galleryPhotos.length})
+                </span>
+              </div>
+              <button
+                onClick={closeAllModals}
+                aria-label="Cerrar visor"
+                style={{
+                  background: "rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  color: "#fff",
+                  borderRadius: "50%",
+                  width: "34px",
+                  height: "34px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Imagen de Galería con flechas de navegación */}
+            <div
+              style={{
+                position: "relative",
+                background: "#020714",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: "240px",
+              }}
+            >
               <img
                 src={galleryPhotos[lightboxIndex].src}
                 alt={galleryPhotos[lightboxIndex].title}
-                style={{ width: "100%", maxHeight: "75vh", objectFit: "contain", display: "block" }}
+                style={{
+                  width: "100%",
+                  maxHeight: "58vh",
+                  objectFit: "contain",
+                  display: "block",
+                }}
               />
 
+              {/* Botón Anterior */}
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   prevLightbox();
                 }}
                 style={{
                   position: "absolute",
-                  left: "14px",
+                  left: "12px",
                   top: "50%",
                   transform: "translateY(-50%)",
-                  background: "rgba(10,26,58,0.75)",
+                  background: "rgba(10,26,58,0.8)",
                   color: "#fff",
                   border: "1px solid rgba(255,255,255,0.3)",
                   borderRadius: "50%",
-                  width: "42px",
-                  height: "42px",
+                  width: "40px",
+                  height: "40px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
+                  backdropFilter: "blur(4px)",
                 }}
                 aria-label="Foto anterior"
               >
-                <ChevronLeft size={24} />
+                <ChevronLeft size={22} />
               </button>
 
+              {/* Botón Siguiente */}
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   nextLightbox();
                 }}
                 style={{
                   position: "absolute",
-                  right: "14px",
+                  right: "12px",
                   top: "50%",
                   transform: "translateY(-50%)",
-                  background: "rgba(10,26,58,0.75)",
+                  background: "rgba(10,26,58,0.8)",
                   color: "#fff",
                   border: "1px solid rgba(255,255,255,0.3)",
                   borderRadius: "50%",
-                  width: "42px",
-                  height: "42px",
+                  width: "40px",
+                  height: "40px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
+                  backdropFilter: "blur(4px)",
                 }}
                 aria-label="Foto siguiente"
               >
-                <ChevronRight size={24} />
-              </button>
-
-              <button
-                onClick={closeAllModals}
-                style={{
-                  position: "absolute",
-                  top: "14px",
-                  right: "14px",
-                  background: "rgba(10,26,58,0.75)",
-                  color: "#fff",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  borderRadius: "50%",
-                  width: "36px",
-                  height: "36px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                }}
-                aria-label="Cerrar visor"
-              >
-                <X size={20} />
+                <ChevronRight size={22} />
               </button>
             </div>
 
-            <div style={{ padding: "16px 22px", background: "rgba(10,26,58,0.9)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                <h3 style={{ font: "700 20px var(--h)", margin: 0, color: "#fff", textTransform: "uppercase" }}>
-                  {galleryPhotos[lightboxIndex].title}
-                </h3>
-                <span style={{ fontSize: "12px", color: "var(--or)", fontWeight: 600 }}>
-                  {lightboxIndex + 1} de {galleryPhotos.length}
-                </span>
-              </div>
-              <p style={{ margin: 0, fontSize: "14px", color: "rgba(255,255,255,0.8)" }}>
+            {/* Pie de Foto con Título y Descripción */}
+            <div
+              style={{
+                padding: "14px 20px",
+                background: "rgba(10,26,58,0.95)",
+                borderTop: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <h3
+                style={{
+                  font: "700 18px var(--h)",
+                  margin: "0 0 4px",
+                  color: "#fff",
+                  textTransform: "uppercase",
+                }}
+              >
+                {galleryPhotos[lightboxIndex].title}
+              </h3>
+              <p style={{ margin: 0, fontSize: "13px", color: "rgba(255,255,255,0.8)", lineHeight: "1.4" }}>
                 {galleryPhotos[lightboxIndex].caption}
               </p>
             </div>

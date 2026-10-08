@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { RFQFormSchema } from "@/lib/zod-schemas";
 import { checkRateLimit, getRetryAfterSeconds } from "@/lib/rate-limiter";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 const MAX_REQUESTS = 5;

@@ -16,6 +16,19 @@ export default function PoliticaPrivacidadPage() {
     <LegalShell
       title="Política de Privacidad"
       subtitle="Tratamiento de datos personales conforme a la Ley Orgánica de Protección de Datos Personales de Venezuela."
+      sections={[
+        "1. Responsable del tratamiento",
+        "2. Datos personales que tratamos",
+        "3. Finalidad y base legal",
+        "4. Conservación de los datos",
+        "5. Destinatarios y encargados",
+        "6. Transferencias internacionales",
+        "7. Derechos del titular",
+        "8. Medidas de seguridad",
+        "9. Menores de edad",
+        "10. Cambios en esta política",
+        "11. Documentos relacionados",
+      ]}
     >
       <LegalSection title="1. Responsable del tratamiento">
         <p>

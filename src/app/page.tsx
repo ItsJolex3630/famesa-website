@@ -31,6 +31,8 @@ import {
 
 const WA_BASE = "https://wa.me/584143410187";
 
+const COPYRIGHT_YEAR = new Date().getFullYear();
+
 // 1. DATA: Servicios
 const services = [
   {
@@ -2079,48 +2081,91 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
       </section>
       </main>
 
-      {/* 15. FOOTER INDUSTRIAL */}
-      <footer>
-        <div className="w" style={{ flexDirection: "column", alignItems: "flex-start", gap: "18px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <Image src="/images/logo.jpg" alt="Famesa C.A." width={520} height={305} />
-            <span style={{ fontWeight: 600, color: "#fff" }}>{CONTACT.company}</span>
+      {/* 15. FOOTER INDUSTRIAL · placa de datos técnica */}
+      <footer className="ftr">
+        <div className="w">
+          <div className="ftr-grid">
+            <div className="ftr-brand">
+              <Image src="/images/logo.jpg" alt="Famesa C.A." width={520} height={305} />
+              <strong>{CONTACT.company}</strong>
+              <p>
+                {CONTACT.tagline}. Planta industrial en {CONTACT.address.sector},{" "}
+                {CONTACT.address.city}, {CONTACT.address.state}.
+              </p>
+            </div>
+
+            <div className="ftr-col">
+              <h4>Datos de la empresa</h4>
+              <ul>
+                <li>
+                  <span className="k">RIF</span>
+                  {CONTACT.rif}
+                </li>
+                <li>
+                  <span className="k">Registro mercantil</span>
+                  {CONTACT.registry}
+                </li>
+                <li>
+                  <span className="k">Capital social</span>
+                  {CONTACT.capital}
+                </li>
+              </ul>
+            </div>
+
+            <div className="ftr-col">
+              <h4>Contacto</h4>
+              <ul>
+                <li>{CONTACT_ADDRESS_LINE}</li>
+                <li>
+                  <a href={`tel:${CONTACT.phones.landline.replace(/\s/g, "")}`}>
+                    {CONTACT.phones.landline}
+                  </a>
+                </li>
+                <li>
+                  <a href={`tel:${CONTACT.phones.mobile1.replace(/\s/g, "")}`}>
+                    {CONTACT.phones.mobile1}
+                  </a>
+                </li>
+                <li>
+                  <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+                </li>
+              </ul>
+            </div>
+
+            <div className="ftr-col">
+              <h4>Documentos legales</h4>
+              <ul>
+                <li>
+                  <Link href="/aviso-legal">Aviso legal</Link>
+                </li>
+                <li>
+                  <Link href="/politica-privacidad">Política de privacidad</Link>
+                </li>
+                <li>
+                  <Link href="/politica-cookies">Política de cookies</Link>
+                </li>
+                <li>
+                  <Link href="/terminos-condiciones">Términos y condiciones</Link>
+                </li>
+              </ul>
+            </div>
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 24px" }}>
-            <span>RIF {CONTACT.rif}</span>
-            <span>{CONTACT.registry}</span>
-            <span>Capital social: {CONTACT.capital}</span>
+          <div className="ftr-bottom">
+            <span>
+              © {COPYRIGHT_YEAR} {CONTACT.company}. Todos los derechos reservados.
+            </span>
+            <span>
+              Página creada por{" "}
+              <a
+                href="https://www.instagram.com/somosvendo.ve/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Vendo
+              </a>
+            </span>
           </div>
-
-          <span>{CONTACT_ADDRESS_LINE}</span>
-
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 20px" }}>
-            <a href={`tel:${CONTACT.phones.landline.replace(/\s/g, "")}`}>{CONTACT.phones.landline}</a>
-            <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
-          </div>
-
-          <nav
-            aria-label="Documentos legales"
-            style={{ display: "flex", flexWrap: "wrap", gap: "8px 20px", borderTop: "1px solid #ffffff1a", paddingTop: "14px", width: "100%" }}
-          >
-            <Link href="/aviso-legal" style={{ color: "#fff" }}>Aviso legal</Link>
-            <Link href="/politica-privacidad" style={{ color: "#fff" }}>Política de privacidad</Link>
-            <Link href="/politica-cookies" style={{ color: "#fff" }}>Política de cookies</Link>
-            <Link href="/terminos-condiciones" style={{ color: "#fff" }}>Términos y condiciones</Link>
-          </nav>
-
-          <span>
-            Página creada por{" "}
-            <a
-              href="https://www.instagram.com/somosvendo.ve/"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "#fff", textDecoration: "underline" }}
-            >
-              Vendo
-            </a>
-          </span>
         </div>
       </footer>
 

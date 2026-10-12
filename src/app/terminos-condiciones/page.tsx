@@ -16,6 +16,19 @@ export default function TerminosCondicionesPage() {
     <LegalShell
       title="Términos y Condiciones"
       subtitle="Reglas aplicables al uso del sitio y a las solicitudes realizadas a través de él."
+      sections={[
+        "1. Aceptación",
+        "2. Identificación",
+        "3. Carácter de la información",
+        "4. Solicitudes de cotización",
+        "5. Propiedad intelectual",
+        "6. Uso correcto del sitio",
+        "7. Limitación de responsabilidad",
+        "8. Fuerza mayor",
+        "9. Modificaciones",
+        "10. Legislación y jurisdicción",
+        "11. Documentos relacionados",
+      ]}
     >
       <LegalSection title="1. Aceptación">
         <p>

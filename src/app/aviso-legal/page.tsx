@@ -16,6 +16,17 @@ export default function AvisoLegalPage() {
     <LegalShell
       title="Aviso legal"
       subtitle="Información general sobre la titularidad y el uso de este sitio web."
+      sections={[
+        "1. Titular del sitio web",
+        "2. Objeto",
+        "3. Condiciones de uso",
+        "4. Propiedad intelectual e industrial",
+        "5. Exclusión de responsabilidad",
+        "6. Enlaces",
+        "7. Modificaciones",
+        "8. Legislación aplicable y jurisdicción",
+        "9. Documentos relacionados",
+      ]}
     >
       <LegalSection title="1. Titular del sitio web">
         <p>

@@ -16,6 +16,14 @@ export default function PoliticaCookiesPage() {
     <LegalShell
       title="Política de Cookies"
       subtitle="Qué son las cookies, cuáles utiliza este sitio y cómo puede gestionarlas."
+      sections={[
+        "1. Qué son las cookies",
+        "2. Qué cookies utiliza este sitio",
+        "3. Servicios de terceros",
+        "4. Cómo gestionar o desactivar las cookies",
+        "5. Actualizaciones",
+        "6. Documentos relacionados",
+      ]}
     >
       <LegalSection title="1. Qué son las cookies">
         <p>

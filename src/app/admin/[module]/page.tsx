@@ -1,5 +1,9 @@
 "use client";
 
+// Cloudflare Pages (@cloudflare/next-on-pages) exige Edge Runtime en toda
+// ruta no estática. Este segmento es dinámico (/admin/[module]).
+export const runtime = "edge";
+
 import { useParams } from "next/navigation";
 import { ModulePage } from "@/components/famesa/modules";
 import { openFamesaDialog } from "@/components/famesa/dialog";

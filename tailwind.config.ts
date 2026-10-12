@@ -21,11 +21,36 @@ const config: Config = {
           orange: "#FF8A1F",
           alertRed: "#DC2626",
         },
+        // Tokens semánticos del panel FAMESA SUITE (/admin).
+        // Definidos con hex literal para que Tailwind 3 permita modificadores de opacidad.
+        background: "#F8FAFC",
+        foreground: "#12203A",
+        primary: {
+          DEFAULT: "#00299F",
+          foreground: "#FFFFFF",
+        },
+        secondary: {
+          DEFAULT: "#F8FAFC",
+          foreground: "#12203A",
+        },
+        accent: {
+          DEFAULT: "#EDF2FC",
+          foreground: "#12203A",
+        },
+        surface: "#FFFFFF",
+        navy: "#0A1A3A",
+        electric: "#003AD7",
+        orange: "#FF8A1F",
+        input: "#C8D2E0",
+        destructive: {
+          DEFAULT: "#DC2626",
+          foreground: "#FFFFFF",
+        },
       },
       fontFamily: {
         heading: ["var(--font-barlow)", "'Barlow Condensed'", "sans-serif"],
         body: ["var(--font-inter)", "'Inter'", "sans-serif"],
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        mono: ["'JetBrains Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       maxWidth: {
         shell: "1280px",

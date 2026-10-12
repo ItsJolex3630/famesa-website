@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { RFQFormSchema } from "@/lib/zod-schemas";
 import { checkRateLimit, getRetryAfterSeconds } from "@/lib/rate-limiter";
+import { getDb, isDbConfigured, logAudit } from "@/lib/db";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -130,9 +131,51 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Codigo unico de seguimiento RFQ (no incluye datos personales).
-    const rfqCode = `RFQ-${Date.now().toString(36).toUpperCase()}`;
+    let rfqCode = `RFQ-${Date.now().toString(36).toUpperCase()}`;
 
-    // 7. Punto de integracion: registrar la solicitud en el CRM / enviar correo.
+    // 7. Persistencia del prospecto en Turso (tabla leads) cuando la BD esta
+    //    configurada. Un fallo de BD nunca bloquea la respuesta al visitante.
+    if (isDbConfigured()) {
+      try {
+        const db = getDb();
+        const urgencyMap: Record<string, string> = {
+          estandar: "Estándar",
+          prioridad: "Prioritario",
+          emergencia_parada: "Urgente - Parada de Planta",
+        };
+        const year = new Date().getFullYear();
+        const countResult = await db.execute("SELECT COUNT(*) AS n FROM leads");
+        const seq = Number(countResult.rows[0]?.n ?? 0) + 1;
+        const dbCode = `RFQ-${year}-${String(seq).padStart(3, "0")}`;
+        await db.execute({
+          sql: `INSERT INTO leads (rfq_code, name, company_name, email, phone, service_type, urgency,
+                  specifications, consent_accepted, source, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'web_rfq', 'nuevo')`,
+          args: [
+            dbCode,
+            validData.fullName,
+            validData.companyName,
+            validData.email,
+            validData.phone,
+            validData.serviceType,
+            urgencyMap[validData.urgency] ?? "Planificado",
+            validData.specifications,
+          ],
+        });
+        rfqCode = dbCode;
+        await logAudit(
+          "leads",
+          dbCode,
+          "create",
+          `RFQ web de ${validData.companyName} (${validData.serviceType})`,
+          validData.email,
+        );
+      } catch (dbError) {
+        console.error("Error guardando lead RFQ en Turso:", dbError);
+      }
+    }
+
+    // 8. Punto de integracion: registrar la solicitud en el CRM / enviar correo.
     //    Ningun secreto se expone al cliente; toda llamada saliente ocurre aqui.
     console.info(
       `[RFQ ${rfqCode}] ${validData.serviceType} · ${validData.urgency} · ${validData.companyName}`,

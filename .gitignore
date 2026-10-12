@@ -8,6 +8,8 @@ dist/
 *.tsbuildinfo
 .env*.local
 .env
+.dev.vars
+.wrangler/
 .vercel/
 npm-debug.log*
 yarn-error.log*

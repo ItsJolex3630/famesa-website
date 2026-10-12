@@ -94,6 +94,15 @@ export const RFQFormSchema = z.object({
     .max(2500, "La descripción no puede exceder 2500 caracteres")
     .transform(sanitizeInput),
 
+  // Consentimiento explícito de la Política de Privacidad (Ley 17.1-2023).
+  // Debe ser exactamente `true`: cualquier otro valor rechaza el envío.
+  consentPrivacy: z.literal(true, {
+    errorMap: () => ({
+      message:
+        "Debe aceptar la Política de Privacidad para poder enviar la solicitud.",
+    }),
+  }),
+
   // Token emitido por el widget de Cloudflare Turnstile
   turnstileToken: z
     .string()

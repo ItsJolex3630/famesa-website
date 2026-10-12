@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Barlow_Condensed, Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import { CONTACT } from "@/lib/contact-data";
 import "./globals.css";
 
 const barlowCondensed = Barlow_Condensed({
@@ -18,7 +19,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://famesa-website.vercel.app"),
+  metadataBase: new URL(CONTACT.siteUrl),
   title:
     "Famesa C.A. | Metalmecánica, Soldadura y Plásticos de Ingeniería en Valencia, Carabobo",
   description:
@@ -69,21 +70,46 @@ export const metadata: Metadata = {
 const localBusinessJsonLd = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
-  name: "Famesa C.A.",
+  "@id": `${CONTACT.siteUrl}/#organization`,
+  name: CONTACT.company,
+  legalName: CONTACT.legalName,
   description:
-    "Taller de metalmecanica, soldadura especial y mecanizado de plasticos de ingenieria con planta en Valencia, Carabobo, Venezuela.",
-  telephone: ["+584143410187", "+584121435069"],
+    "Taller de metalmecánica, soldadura especial y mecanizado de plásticos de ingeniería con planta en Valencia, Carabobo, Venezuela.",
+  url: CONTACT.siteUrl,
+  logo: `${CONTACT.siteUrl}/images/logo.jpg`,
+  image: `${CONTACT.siteUrl}/images/hero-bg.jpg`,
+  telephone: [
+    CONTACT.phones.landline.replace(/\s/g, ""),
+    CONTACT.phones.mobile1.replace(/\s/g, ""),
+    CONTACT.phones.mobile2.replace(/\s/g, ""),
+  ],
+  email: CONTACT.email,
+  vatID: `VE-${CONTACT.rif}`,
+  taxID: CONTACT.rif,
   address: {
     "@type": "PostalAddress",
-    streetAddress: "Zona Industrial Santa Rosa",
-    addressLocality: "Valencia",
-    addressRegion: "Carabobo",
-    postalCode: "2001",
+    streetAddress: CONTACT.address.street,
+    addressLocality: CONTACT.address.city,
+    addressRegion: CONTACT.address.state,
+    postalCode: CONTACT.address.postalCode,
     addressCountry: "VE",
   },
   areaServed: "VE",
-  openingHours: ["Mo-Fr 07:30-17:00"],
-  sameAs: ["https://www.instagram.com/famesa.ca"],
+  openingHoursSpecification: [
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+      ],
+      opens: "07:30",
+      closes: "17:00",
+    },
+  ],
+  sameAs: [CONTACT.social.instagram],
 };
 
 export default function RootLayout({

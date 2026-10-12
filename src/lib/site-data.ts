@@ -34,6 +34,8 @@ export const SERVICES: ServiceItem[] = [
       "Torno paralelo convencional",
       "Fresa de bancada y puente",
       "Rectificado de superficie y espinales",
+      "Brochado",
+      "Mandrinado y cazadoras",
     ],
     applications: [
       "Ejes motrices y semiejes",
@@ -196,10 +198,14 @@ export const MATERIALS: MaterialRow[] = [
 ];
 
 export const QUALITY_PILLARS: QualityPillar[] = [
+  // NOTA LEGAL: las referencias a normas describen la orientación técnica del
+  // taller, NO una certificación formal acreditada. No afirmar certificaciones
+  // que el cliente no pueda respaldar con el documento oficial correspondiente.
+  // PENDIENTE CLIENTE: confirmar si existe certificado ISO/ASME/EN vigente.
   {
     code: "QA-01",
     title: "Control dimensional",
-    norm: "ISO 9001:2015",
+    norm: "Procesos alineados con ISO 9001",
     description:
       "Verificación de cada cota crítica antes del desmonte, con instrumentos calibrados y trazabilidad de medición.",
     checks: [
@@ -212,20 +218,20 @@ export const QUALITY_PILLARS: QualityPillar[] = [
   {
     code: "QA-02",
     title: "Calificación de procedimientos",
-    norm: "ASME Sección IX / AWS D1.1",
+    norm: "Procedimientos alineados con ASME Sec. IX / AWS D1.1",
     description:
-      "Procedimientos de soldadura calificados y welders evaluados con cupones vigentes para el material y la posición.",
+      "Procedimientos de soldadura definidos por material y posición, con evaluación interna del soldador antes de intervenir una unión crítica.",
     checks: [
-      "WPS homologados por material y espesor",
-      "PQR con ensayos mecánicos y de doblado",
-      "Cupones de qualification de soldadores",
+      "Especificaciones de soldadura por material y espesor",
+      "Control de parámetros y ensayos internos de la unión",
+      "Evaluación de soldadores por cupón de prueba",
       "Control de precalentamiento e interpas",
     ],
   },
   {
     code: "QA-03",
     title: "Ensayos no destructivos",
-    norm: "ASNT SNT-TC-1A · MT / PT",
+    norm: "Ensayos bajo criterios ASNT SNT-TC-1A",
     description:
       "Inspección de discontinuidades superficiales y subsuperficiales en uniones soldadas y piezas mecanizadas.",
     checks: [
@@ -238,9 +244,9 @@ export const QUALITY_PILLARS: QualityPillar[] = [
   {
     code: "QA-04",
     title: "Trazabilidad de materiales",
-    norm: "EN 10204 3.1 / 3.2",
+    norm: "Trazabilidad de materiales (certificados EN 10204 bajo solicitud)",
     description:
-      "Correlación entre la orden de compra del material y la pieza entregada, con certificados de composición química.",
+      "Correlación entre la orden de compra del material y la pieza entregada, con certificados de composición química cuando el cliente los requiere.",
     checks: [
       "Certificados de colada y composición química",
       "MTR de aceros, bronces y polímeros",

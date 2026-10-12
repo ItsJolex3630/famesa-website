@@ -137,6 +137,10 @@ export async function POST(request: NextRequest) {
     console.info(
       `[RFQ ${rfqCode}] ${validData.serviceType} · ${validData.urgency} · ${validData.companyName}`,
     );
+    // Rastro de auditoria: el consentimiento de privacidad ya fue verificado por Zod.
+    console.info(
+      `[RFQ ${rfqCode}] consentimiento de política de privacidad aceptado a las ${new Date().toISOString()}`,
+    );
 
     return NextResponse.json(
       {

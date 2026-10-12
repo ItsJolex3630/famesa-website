@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef, FormEvent } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
+import { CONTACT, CONTACT_ADDRESS_LINE } from "@/lib/contact-data";
 import {
   Phone,
   Clock,
@@ -289,6 +291,31 @@ const industries = [
   { name: "Metalmecánica general y manufactura", badge: "Mecanizado CNC" },
 ];
 
+// FASE 3 · Sección "Quiénes somos": texto de la carta corporativa + instalaciones.
+const aboutParagraphs = [
+  "FAMESA C.A. es una industria venezolana especializada en el área metalmecánica, soldaduras especiales y mantenimiento general. A lo largo de su trayectoria se ha destacado por la alta calidad de sus trabajos y el cumplimiento de las especificaciones requeridas por sus clientes.",
+  "Desde su inicio ha sido preocupación de la empresa desarrollar técnicas avanzadas para obtener productos de altísima calidad, contando con equipo y maquinaria de primera línea y personal técnicamente capacitado y especializado. Nuestra principal actividad comprende la fabricación, reparación y asistencia técnica.",
+  "Nos orientamos hacia la satisfacción total de nuestros clientes, impulsando nuestras operaciones para generar recursos que contribuyan al desarrollo del país y a la sustitución de importaciones. Contamos con personal y equipo calificado para respaldar cada trabajo.",
+];
+
+const facilities = [
+  { area: "600", unit: "m²", label: "Instalaciones totales" },
+  { area: "300", unit: "m²", label: "Área de mecanizado" },
+  { area: "25", unit: "m²", label: "Control de calidad" },
+  { area: "25", unit: "m²", label: "Almacén y servicios" },
+];
+
+// FASE 3 · Clientes. Se publican por NOMBRE, sin logotipos, para no usar marcas
+// de terceros sin autorización escrita. PENDIENTE CLIENTE: aportar autorización
+// si se desean mostrar los logotipos.
+const clientes = [
+  { nombre: "Grupo Sindoni", sector: "Alimentos y embotellado" },
+  { nombre: "Mondelez Venezuela", sector: "Alimentos y confitería" },
+  { nombre: "Grupo Corimon", sector: "Industrial y construcción" },
+  { nombre: "Ajeven", sector: "Bebidas" },
+  { nombre: "Coca Cola Fensa", sector: "Bebidas y embotellado" },
+];
+
 const processSteps = [
   { num: "01", title: "Cuéntanos qué necesitas", text: "Pieza, medidas aproximadas, material y cantidad requerida." },
   { num: "02", title: "Te respondemos con cotización", text: "Propuesta técnica, tiempo estimado de entrega y opciones de material." },
@@ -326,7 +353,7 @@ const faqs = [
   },
 ];
 
-const galleryPhotos = [
+const tallerPhotos = [
   {
     src: "/images/taller-rectificado.jpg",
     title: "Mecanizado de precisión en torno industrial pesado",
@@ -347,6 +374,113 @@ const galleryPhotos = [
     title: "Rectificado y acabado de rodillos industriales",
     caption: "Montaje sobre plato de torno con chispas de mecanizado de precisión en planta Santa Rosa, Valencia.",
   },
+];
+
+// Catálogo de trabajos del dossier corporativo, agrupado por línea de trabajo.
+const catalogoTrabajos = [
+  {
+    slug: "beneficiadora",
+    title: "Piezas para beneficiadora",
+    images: ["beneficiadora-1.jpg", "beneficiadora-2.jpg", "beneficiadora-3.jpg"],
+  },
+  {
+    slug: "torno-fresadora",
+    title: "Piezas en torno y fresadora",
+    images: [
+      "torno-fresadora-1.jpg",
+      "torno-fresadora-2.jpg",
+      "torno-fresadora-3.jpg",
+      "torno-fresadora-4.jpg",
+      "torno-fresadora-5.jpg",
+      "torno-fresadora-6.jpg",
+      "torno-fresadora-7.jpg",
+      "torno-fresadora-8.jpg",
+      "torno-fresadora-9.jpg",
+    ],
+  },
+  {
+    slug: "nylon-ultraleno",
+    title: "Piezas en nylon y ultraleno",
+    images: [
+      "nylon-ultraleno-1.jpg",
+      "nylon-ultraleno-2.jpg",
+      "nylon-ultraleno-3.jpg",
+      "nylon-ultraleno-4.jpg",
+    ],
+  },
+  {
+    slug: "reductores",
+    title: "Reparación de reductores y coronas",
+    images: [
+      "reductores-1.jpg",
+      "reductores-2.jpg",
+      "reductores-3.jpg",
+      "reductores-4.jpg",
+      "reductores-5.jpg",
+    ],
+  },
+  {
+    slug: "tanques-inox",
+    title: "Fabricación de tanques de inoxidable",
+    images: ["tanques-inox-1.jpg", "tanques-inox-2.jpg", "tanques-inox-3.jpg"],
+  },
+  {
+    slug: "estructuras",
+    title: "Estructuras y tuberías",
+    images: [
+      "estructuras-1.jpg",
+      "estructuras-2.jpg",
+      "estructuras-3.jpg",
+      "estructuras-4.jpg",
+      "estructuras-5.jpg",
+    ],
+  },
+  {
+    slug: "metalmecanica",
+    title: "Piezas metalmecánicas",
+    images: [
+      "metalmecanica-1.jpg",
+      "metalmecanica-2.jpg",
+      "metalmecanica-3.jpg",
+      "metalmecanica-4.jpg",
+    ],
+  },
+  {
+    slug: "rodillos-vulc",
+    title: "Rodillos vulcanizados",
+    images: ["rodillos-vulc-1.jpg", "rodillos-vulc-2.jpg", "rodillos-vulc-3.jpg"],
+  },
+  {
+    slug: "gatos-hidraulicos",
+    title: "Reparación de gatos hidráulicos y neumáticos",
+    images: [
+      "gatos-hidraulicos-1.jpg",
+      "gatos-hidraulicos-2.jpg",
+      "gatos-hidraulicos-3.jpg",
+    ],
+  },
+];
+
+// Índice acumulado para que cada miniatura del catálogo abra el visor en la
+// posición correcta dentro de `galleryPhotos`.
+const catalogoConIndice = (() => {
+  let running = tallerPhotos.length;
+  return catalogoTrabajos.map((cat) => {
+    const start = running;
+    running += cat.images.length;
+    return { ...cat, start };
+  });
+})();
+
+const galleryPhotos = [
+  ...tallerPhotos,
+  ...catalogoTrabajos.flatMap((cat) =>
+    cat.images.map((file, i) => ({
+      src: `/images/catalogo/${file}`,
+      title: `${cat.title} · ${i + 1}`,
+      caption: `Trabajo realizado por FAMESA C.A. — ${cat.title.toLowerCase()}.`,
+    })),
+  ),
 ];
 
 const sparks = [
@@ -395,6 +529,7 @@ export default function HomePage() {
   const [formEmail, setFormEmail] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formMessage, setFormMessage] = useState("");
+  const [formConsent, setFormConsent] = useState(false);
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rfqTrackingId, setRfqTrackingId] = useState("");
@@ -429,7 +564,7 @@ export default function HomePage() {
     rvElements.forEach((el) => observer.observe(el));
 
     // Nav active section spy
-    const sectionIds = ["servicios", "catalogo", "piezas", "industrias", "materiales", "taller", "proceso", "calidad", "faq", "cotiza"];
+    const sectionIds = ["servicios", "catalogo", "piezas", "industrias", "empresa", "materiales", "taller", "proceso", "calidad", "clientes", "faq", "cotiza"];
     const sectionObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
@@ -596,6 +731,10 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
       setFormError("Por favor descríbenos brevemente la pieza o falla que necesitas solucionar.");
       return;
     }
+    if (!formConsent) {
+      setFormError("Debes aceptar la Política de Privacidad para poder enviar tu solicitud.");
+      return;
+    }
     setFormError("");
     setIsSubmitting(true);
 
@@ -615,6 +754,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
           serviceType: resolveServiceType(formService),
           urgency: formUrgency,
           specifications: formMessage.trim(),
+          consentPrivacy: true,
         }),
       }).then(async (res) => {
         if (!res.ok) {
@@ -717,6 +857,13 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
             </a>
             <a
               className="l"
+              href="#empresa"
+              aria-current={activeSection === "empresa" ? "true" : undefined}
+            >
+              Empresa
+            </a>
+            <a
+              className="l"
               href="#materiales"
               aria-current={activeSection === "materiales" ? "true" : undefined}
             >
@@ -735,6 +882,13 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
               aria-current={activeSection === "calidad" ? "true" : undefined}
             >
               Calidad
+            </a>
+            <a
+              className="l"
+              href="#clientes"
+              aria-current={activeSection === "clientes" ? "true" : undefined}
+            >
+              Clientes
             </a>
             <a
               className="l"
@@ -806,7 +960,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
             <span>Servicio técnico y emergencias 24/7</span>
             <span>Santa Rosa, Valencia · Carabobo</span>
             <span style={{ borderColor: "rgba(255,138,31,0.4)", color: "#ffc17a" }}>
-              Tolerancias DIN ISO 2768
+              Tolerancias de mecanizado controladas
             </span>
           </div>
         </div>
@@ -1192,6 +1346,60 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
         </div>
       </section>
 
+      {/* 8b. QUIÉNES SOMOS + INSTALACIONES */}
+      <section id="empresa">
+        <div className="w two">
+          <div className="rv">
+            <span className="tag" style={{ color: "var(--bl)" }}>
+              Quiénes somos
+            </span>
+            <h2>Industria venezolana al servicio de la industria</h2>
+            {aboutParagraphs.map((p, idx) => (
+              <p key={idx} style={{ color: "var(--mu)", margin: "0 0 14px" }}>
+                {p}
+              </p>
+            ))}
+            <div style={{ marginTop: "18px", display: "flex", flexWrap: "wrap", gap: "8px 22px", fontSize: "13px", color: "var(--ink)", fontWeight: 600 }}>
+              <span>RIF {CONTACT.rif}</span>
+              <span>{CONTACT.registry}</span>
+            </div>
+          </div>
+
+          <div className="rv" style={{ ["--i" as string]: "1" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "14px",
+              }}
+            >
+              {facilities.map((f, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    background: "var(--st)",
+                    border: "1px solid var(--st2)",
+                    borderRadius: "16px",
+                    padding: "22px 18px",
+                  }}
+                >
+                  <div style={{ font: "700 42px/1 var(--h)", color: "var(--bl)" }}>
+                    {f.area}
+                    <span style={{ fontSize: "20px", marginLeft: "4px" }}>{f.unit}</span>
+                  </div>
+                  <div style={{ marginTop: "6px", fontSize: "13px", fontWeight: 600, color: "var(--mu)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    {f.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p style={{ margin: "14px 0 0", fontSize: "13px", color: "var(--mu)" }}>
+              Instalaciones adecuadas a la organización y al servicio que prestamos, en {CONTACT.address.sector}, {CONTACT.address.city}, {CONTACT.address.state}.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* 9. MATERIALES: EXPLORADOR INTERACTIVO CON FICHA TÉCNICA */}
       <section id="materiales">
         <div className="w">
@@ -1364,6 +1572,67 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
               <figcaption>Foto real · Taller Famesa</figcaption>
             </figure>
           </div>
+
+          {/* Catálogo de trabajos realizados (dossier corporativo) */}
+          <div style={{ marginTop: "48px" }}>
+            <span className="tag" style={{ color: "var(--bl)" }}>
+              Catálogo de trabajos
+            </span>
+            <h3 style={{ font: "700 clamp(24px,3vw,34px)/1.05 var(--h)", textTransform: "uppercase", margin: "0 0 8px" }}>
+              Trabajos fabricados y reparados
+            </h3>
+            <p className="sub" style={{ marginBottom: "28px" }}>
+              Una muestra de las piezas y equipos que fabricamos y reparamos para la industria. Haz clic en cualquier imagen para ampliarla.
+            </p>
+
+            {catalogoConIndice.map((cat) => (
+              <div key={cat.slug} style={{ marginBottom: "30px" }}>
+                <h4
+                  style={{
+                    font: "700 15px var(--h)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "var(--navy)",
+                    margin: "0 0 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                  }}
+                >
+                  <span style={{ width: "22px", height: "2px", background: "var(--bl)", display: "inline-block" }} />
+                  {cat.title}
+                </h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: "12px" }}>
+                  {cat.images.map((file, i) => (
+                    <button
+                      key={file}
+                      type="button"
+                      onClick={() => openLightboxByIndex(cat.start + i)}
+                      title={`Ampliar: ${cat.title}`}
+                      style={{
+                        position: "relative",
+                        aspectRatio: "4 / 3",
+                        border: "1px solid var(--st2)",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                        background: "var(--st)",
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      <Image
+                        alt={`${cat.title} — trabajo ${i + 1} de Famesa C.A.`}
+                        src={`/images/catalogo/${file}`}
+                        fill
+                        sizes="(min-width: 860px) 220px, 45vw"
+                        style={{ objectFit: "cover" }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -1406,6 +1675,42 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* 12b. CLIENTES */}
+      <section id="clientes">
+        <div className="w">
+          <span className="tag" style={{ color: "var(--bl)" }}>
+            Confianza industrial
+          </span>
+          <h2>Empresas que confían en nosotros</h2>
+          <p className="sub">
+            Atendemos requerimientos de fabricación, reparación y mantenimiento para empresas líderes de distintos sectores productivos.
+          </p>
+          <div className="grid">
+            {clientes.map((c, idx) => (
+              <div
+                key={idx}
+                className="rv"
+                style={{
+                  ["--i" as string]: idx.toString(),
+                  background: "#fff",
+                  border: "1px solid var(--st2)",
+                  borderRadius: "16px",
+                  padding: "22px 20px",
+                }}
+              >
+                <strong style={{ display: "block", font: "700 22px var(--h)", textTransform: "uppercase", color: "var(--navy)" }}>
+                  {c.nombre}
+                </strong>
+                <span style={{ fontSize: "13px", color: "var(--mu)" }}>{c.sector}</span>
+              </div>
+            ))}
+          </div>
+          <p style={{ marginTop: "16px", fontSize: "12px", color: "var(--mu)" }}>
+            Las denominaciones de terceros se citan únicamente con fines descriptivos de la experiencia comercial y pertenecen a sus respectivos titulares.
+          </p>
         </div>
       </section>
 
@@ -1478,10 +1783,31 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
                   <Copy size={12} /> Copiar
                 </button>
               </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <a className="tel" href={`tel:${CONTACT.phones.landline.replace(/\s/g, "")}`} style={{ fontSize: "17px", fontWeight: 700 }}>
+                  {CONTACT.phones.landline}
+                </a>
+                <button
+                  onClick={() => copyToClipboard(CONTACT.phones.landline.replace(/\s/g, ""), CONTACT.phones.landline)}
+                  style={{ background: "rgba(255,255,255,0.15)", border: 0, color: "#fff", borderRadius: "6px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                >
+                  <Copy size={12} /> Copiar
+                </button>
+              </div>
             </div>
 
             <b>Dirección de Taller</b>
-            <p>Zona Industrial Santa Rosa, Valencia, Estado Carabobo, Venezuela.</p>
+            <p>{CONTACT_ADDRESS_LINE}.</p>
+            <p style={{ marginTop: "6px" }}>
+              <a
+                className="tel"
+                href={`mailto:${CONTACT.email}`}
+                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+              >
+                {CONTACT.email}
+              </a>
+            </p>
             <p style={{ marginTop: "6px" }}>
               <a
                 className="tel"
@@ -1693,6 +2019,42 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
               </div>
             </div>
 
+            {/* Consentimiento de privacidad (Ley Orgánica de Protección de Datos Personales) */}
+            <label
+              htmlFor="consent"
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "10px",
+                fontSize: "12.5px",
+                lineHeight: 1.5,
+                color: "var(--mu)",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              <input
+                id="consent"
+                type="checkbox"
+                checked={formConsent}
+                onChange={(e) => setFormConsent(e.target.checked)}
+                required
+                style={{ width: "16px", height: "16px", marginTop: "2px", flexShrink: 0, accentColor: "var(--bl)" }}
+              />
+              <span>
+                He leído y acepto la{" "}
+                <a
+                  href="/politica-privacidad"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--bl)", textDecoration: "underline", fontWeight: 700 }}
+                >
+                  Política de Privacidad
+                </a>{" "}
+                y autorizo el tratamiento de mis datos para gestionar esta solicitud de cotización.
+              </span>
+            </label>
+
             {formError && (
               <small
                 aria-live="polite"
@@ -1719,13 +2081,34 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
 
       {/* 15. FOOTER INDUSTRIAL */}
       <footer>
-        <div className="w">
+        <div className="w" style={{ flexDirection: "column", alignItems: "flex-start", gap: "18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <Image src="/images/logo.jpg" alt="Famesa C.A." width={520} height={305} />
-            <span style={{ fontWeight: 600, color: "#fff" }}>Famesa C.A.</span>
+            <span style={{ fontWeight: 600, color: "#fff" }}>{CONTACT.company}</span>
           </div>
 
-          <span>RIF J-31352388-7 · Zona Industrial Santa Rosa, Valencia, Carabobo, Venezuela</span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 24px" }}>
+            <span>RIF {CONTACT.rif}</span>
+            <span>{CONTACT.registry}</span>
+            <span>Capital social: {CONTACT.capital}</span>
+          </div>
+
+          <span>{CONTACT_ADDRESS_LINE}</span>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 20px" }}>
+            <a href={`tel:${CONTACT.phones.landline.replace(/\s/g, "")}`}>{CONTACT.phones.landline}</a>
+            <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+          </div>
+
+          <nav
+            aria-label="Documentos legales"
+            style={{ display: "flex", flexWrap: "wrap", gap: "8px 20px", borderTop: "1px solid #ffffff1a", paddingTop: "14px", width: "100%" }}
+          >
+            <Link href="/aviso-legal" style={{ color: "#fff" }}>Aviso legal</Link>
+            <Link href="/politica-privacidad" style={{ color: "#fff" }}>Política de privacidad</Link>
+            <Link href="/politica-cookies" style={{ color: "#fff" }}>Política de cookies</Link>
+            <Link href="/terminos-condiciones" style={{ color: "#fff" }}>Términos y condiciones</Link>
+          </nav>
 
           <span>
             Página creada por{" "}

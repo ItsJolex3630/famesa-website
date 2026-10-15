@@ -490,6 +490,45 @@ export function makeSeed(): DataStore {
   };
 }
 
+export function makeEmptyStore(): DataStore {
+  return {
+    leads: [],
+    cotizaciones: [],
+    ordenes: [],
+    taller: [
+      { id: 'CNC-01', name: 'Torno CNC Haas ST-30', status: 'operativa', hours: 0, capacity: 176, ot: '—', maintenance: '2026-11-15', cost: 28, standard: 'Mecanizado CNC alta precisión' },
+      { id: 'TOR-01', name: 'Torno Paralelo Pinacho 2 m', status: 'operativa', hours: 0, capacity: 176, ot: '—', maintenance: '2026-11-15', cost: 18, standard: 'Tornería pesada convencional' },
+      { id: 'FRE-01', name: 'Fresadora Universal Bancada', status: 'operativa', hours: 0, capacity: 176, ot: '—', maintenance: '2026-11-15', cost: 20, standard: 'Fresado y ranurado' },
+      { id: 'SOL-01', name: 'Estación Soldadura TIG/MIG', status: 'operativa', hours: 0, capacity: 176, ot: '—', maintenance: '2026-11-15', cost: 16, standard: 'ASME Sec. IX / AWS D1.1' },
+    ],
+    clientes: [],
+    inventario: [
+      { id: 'MAT-001', name: 'Acero SAE 1045 Barra Redonda', status: 'disponible', stock: 0, min: 100, unit: 'kg', cost: 3.2, location: 'Patio Barras', kardex: 'Inventario inicial' },
+      { id: 'MAT-002', name: 'Acero SAE 1020 Barra Redonda', status: 'disponible', stock: 0, min: 100, unit: 'kg', cost: 2.8, location: 'Patio Barras', kardex: 'Inventario inicial' },
+      { id: 'MAT-003', name: 'Acero Bonificado AISI 4140', status: 'disponible', stock: 0, min: 80, unit: 'kg', cost: 5.5, location: 'Patio Barras', kardex: 'Inventario inicial' },
+      { id: 'MAT-004', name: 'Acero Inox AISI 304', status: 'disponible', stock: 0, min: 50, unit: 'kg', cost: 8.5, location: 'Patio Barras', kardex: 'Inventario inicial' },
+      { id: 'MAT-005', name: 'Bronce Fosforado SAE 64/65 (Bocinas)', status: 'disponible', stock: 0, min: 40, unit: 'kg', cost: 16.5, location: 'Almacén Bronces', kardex: 'Inventario inicial' },
+      { id: 'MAT-006', name: 'Teflón PTFE Virgen Barra', status: 'disponible', stock: 0, min: 20, unit: 'kg', cost: 24.0, location: 'Almacén Polímeros', kardex: 'Inventario inicial' },
+      { id: 'MAT-007', name: 'Nylon 6 Poliamida Barra Maciza', status: 'disponible', stock: 0, min: 30, unit: 'kg', cost: 9.8, location: 'Almacén Polímeros', kardex: 'Inventario inicial' },
+      { id: 'MAT-008', name: 'POM Acetal Delrin', status: 'disponible', stock: 0, min: 25, unit: 'kg', cost: 13.5, location: 'Almacén Polímeros', kardex: 'Inventario inicial' },
+      { id: 'MAT-009', name: 'UHMW-PE Ultraleno', status: 'disponible', stock: 0, min: 30, unit: 'kg', cost: 15.0, location: 'Almacén Polímeros', kardex: 'Inventario inicial' },
+    ],
+    compras: [],
+    facturacion: [],
+    cobros: [],
+    gastos: [],
+    reportes: [],
+    personal: [
+      { id: 'PER-001', name: 'Joel Medina', role: 'Director / Dueño', status: 'activo', phone: '+58 414 341 01 87', cost: 0 },
+      { id: 'PER-002', name: 'Dirección Técnica', role: 'Gerente de Planta', status: 'activo', phone: '+58 412 143 50 69', cost: 15 },
+    ],
+    ajustes: [
+      { id: 'SET-001', name: 'Empresa', value: 'FAMESA C.A.', rif: 'J-31352388-7', address: 'Santa Rosa, Valencia, Carabobo', status: 'activo' },
+      { id: 'SET-002', name: 'Correo oficial', value: 'famesa2005@gmail.com', status: 'activo' },
+    ],
+  };
+}
+
 export const usd = (n: number) =>
   new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n);
 export const ves = (n: number) =>

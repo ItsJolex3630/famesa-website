@@ -37,11 +37,11 @@ export function LegalShell({
         <div className="mx-auto flex h-[68px] max-w-[1120px] items-center gap-4 px-5">
           <Link href="/" aria-label="Volver al inicio de Famesa C.A.">
             <Image
-              src="/images/logo.jpg"
+              src="/images/logo.png"
               alt="FAMESA C.A."
-              width={130}
-              height={76}
-              className="h-[44px] w-auto"
+              width={200}
+              height={77}
+              className="h-[44px] w-auto object-contain"
             />
           </Link>
           <span className="ml-auto hidden text-xs font-bold uppercase tracking-[0.16em] text-[#5b6a85] sm:block">

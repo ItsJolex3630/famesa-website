@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { makeSeed, invoiceTotals, type DataStore, type ModuleKey, type RecordData, type Role, canAccess } from './data';
+import { makeSeed, makeEmptyStore, invoiceTotals, type DataStore, type ModuleKey, type RecordData, type Role, canAccess } from './data';
 
 export type AuditEntry = { time: string; action: string; role: Role };
 
@@ -27,6 +27,8 @@ type ContextType = {
   payment: (id: string, amount: number, method: string) => void;
   saveCloud: () => Promise<void>;
   loadCloud: () => Promise<void>;
+  resetClean: () => void;
+  resetDemo: () => void;
   userEmail: string;
   cloudBusy: boolean;
 };
@@ -380,6 +382,18 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resetClean = () => {
+    setData(makeEmptyStore());
+    audit('Base de datos restablecida a modo producción limpio (sin registros demo)');
+    toast.success('Panel restablecido a modo limpio de producción');
+  };
+
+  const resetDemo = () => {
+    setData(makeSeed());
+    audit('Datos de demostración restaurados');
+    toast.success('Datos de demostración restaurados');
+  };
+
   return (
     <Context.Provider
       value={{
@@ -409,6 +423,8 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
         payment,
         saveCloud,
         loadCloud,
+        resetClean,
+        resetDemo,
         userEmail,
         cloudBusy,
       }}

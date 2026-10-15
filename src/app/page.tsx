@@ -27,6 +27,7 @@ import {
   CheckCircle2,
   X,
   Maximize2,
+  Mail,
 } from "lucide-react";
 
 const WA_BASE = "https://wa.me/584143410187";
@@ -150,11 +151,11 @@ const partsCatalog = [
     desc: "Mecanizado de ranuras para juntas, orificios de fijación.",
   },
   {
-    code: "BUJES",
-    name: "Bujes técnicos de fricción",
+    code: "BOCINAS",
+    name: "Bocinas técnicas de fricción",
     spec: "A medida según alojamiento",
     material: "Bronce SAE 64/65 / Nylon 6 / Teflón",
-    desc: "Autolubricados, con ranuras de engrase en espiral.",
+    desc: "Autolubricadas, con ranuras de engrase en espiral para trabajo continuo.",
   },
   {
     code: "PIÑONES",
@@ -713,8 +714,7 @@ export default function HomePage() {
 Solicitado desde famesa.com.ve · Valencia, Carabobo`;
   };
 
-  const handleFormSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const submitRFQ = async (channel: "whatsapp" | "email") => {
     if (!formName.trim()) {
       setFormError("Por favor indica tu nombre o empresa.");
       return;
@@ -740,9 +740,6 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
     setFormError("");
     setIsSubmitting(true);
 
-    const waText = getWhatsAppMessageText();
-    const targetUrl = `${WA_BASE}?text=${encodeURIComponent(waText)}`;
-
     // Registro en el endpoint serverless (log de seguimiento RFQ, no bloquea el envío).
     try {
       fetch("/api/quote", {
@@ -767,14 +764,50 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
       });
     } catch {}
 
-    toast.success("Abriendo WhatsApp con tu requerimiento técnico estructurado...");
-
-    setTimeout(() => {
-      window.location.href = targetUrl;
+    if (channel === "whatsapp") {
+      const waText = getWhatsAppMessageText();
+      const targetUrl = `${WA_BASE}?text=${encodeURIComponent(waText)}`;
+      toast.success("Abriendo WhatsApp con tu requerimiento técnico estructurado...");
       setTimeout(() => {
-        setIsSubmitting(false);
-      }, 3000);
-    }, 500);
+        window.location.href = targetUrl;
+        setTimeout(() => {
+          setIsSubmitting(false);
+        }, 3000);
+      }, 500);
+    } else {
+      const subject = `[RFQ-FAMESA] Solicitud de Cotización Técnica - ${formName.trim()}`;
+      const body = `Estimado equipo técnico de FAMESA C.A.,
+
+Solicito formalmente la cotización del siguiente requerimiento industrial:
+
+• Cliente / Empresa: ${formName.trim()}
+• Teléfono de contacto: ${phone}
+• Correo de respuesta: ${email}
+• Servicio requerido: ${formService}
+• Nivel de Urgencia: ${urgencyLabel}
+• Cantidad estimada: ${formQuantity} unidad(es)
+• Material preferido: ${formMaterial}
+• Detalles técnicos / Medidas:
+${formMessage.trim()}
+
+----------------------------------------
+Código de seguimiento web: ${rfqTrackingId}
+Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
+
+      const mailtoUrl = `mailto:${CONTACT.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      toast.success("Abriendo tu correo / Gmail con el requerimiento estructurado...");
+      setTimeout(() => {
+        window.location.href = mailtoUrl;
+        setTimeout(() => {
+          setIsSubmitting(false);
+        }, 3000);
+      }, 500);
+    }
+  };
+
+  const handleFormSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    await submitRFQ("whatsapp");
   };
 
   // Filtered lists
@@ -824,6 +857,15 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
               0412 143 5069
               <Copy size={10} style={{ opacity: 0.7 }} />
             </button>
+            <a
+              href={`mailto:${CONTACT.email}?subject=Consulta%20T%C3%A9cnica%20Famesa`}
+              className="chip-copy"
+              title="Enviar correo directo a FAMESA C.A."
+              style={{ textDecoration: "none" }}
+            >
+              <Mail size={11} style={{ color: "var(--or)" }} />
+              {CONTACT.email}
+            </a>
           </div>
         </div>
       </div>
@@ -832,7 +874,14 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
       <nav className={scrolled ? "sc" : ""}>
         <div className="w">
           <a href="#top" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
-            <Image src="/images/logo.jpg" alt="Famesa C.A." width={520} height={305} priority />
+            <Image 
+              src="/images/logo.png" 
+              alt="FAMESA C.A. - Fabricaciones Metalmecánica, Soldaduras y Afines" 
+              width={200} 
+              height={77} 
+              priority 
+              style={{ height: "46px", width: "auto", objectFit: "contain" }}
+            />
           </a>
 
           <div className="nl">
@@ -1319,7 +1368,7 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
               }}
             >
               <Maximize2 size={13} />
-              Engranajes y bujes mecanizados en Famesa
+              Engranajes y bocinas mecanizadas en Famesa
             </div>
           </div>
         </div>
@@ -1804,15 +1853,6 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
             <p style={{ marginTop: "6px" }}>
               <a
                 className="tel"
-                href={`mailto:${CONTACT.email}`}
-                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-              >
-                {CONTACT.email}
-              </a>
-            </p>
-            <p style={{ marginTop: "6px" }}>
-              <a
-                className="tel"
                 target="_blank"
                 rel="noopener noreferrer"
                 href="https://www.google.com/maps/search/?api=1&query=Famesa+C.A.+Santa+Rosa+Valencia+Carabobo"
@@ -1822,6 +1862,33 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
                 <ExternalLink size={14} />
               </a>
             </p>
+
+            <div style={{ marginTop: "14px", marginBottom: "14px", background: "rgba(0,58,215,0.18)", border: "1px solid rgba(0,58,215,0.4)", borderRadius: "8px", padding: "12px" }}>
+              <span style={{ color: "#93c5fd", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Mail size={13} style={{ color: "var(--or)" }} /> Correo Electrónico Oficial
+              </span>
+              <a
+                href={`mailto:${CONTACT.email}?subject=Requerimiento%20Industrial%20Famesa`}
+                style={{ display: "block", color: "#fff", font: "700 15px/1.3 var(--h)", margin: "4px 0", textDecoration: "none" }}
+              >
+                {CONTACT.email}
+              </a>
+              <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
+                <a
+                  href={`mailto:${CONTACT.email}?subject=Requerimiento%20Industrial%20Famesa`}
+                  style={{ background: "var(--bl)", color: "#fff", padding: "4px 10px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                >
+                  <Mail size={11} /> Redactar Correo
+                </a>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(CONTACT.email, "Correo Famesa")}
+                  style={{ background: "rgba(255,255,255,0.15)", border: 0, color: "#fff", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "11px", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                >
+                  <Copy size={11} /> Copiar
+                </button>
+              </div>
+            </div>
 
             <b>Redes y Catálogo</b>
             <p>
@@ -2067,15 +2134,29 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
               </small>
             )}
 
-            <button
-              className="btn"
-              type="submit"
-              disabled={isSubmitting}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "6px" }}
-            >
-              <MessageCircle size={18} />
-              {isSubmitting ? "Abriendo WhatsApp…" : "Enviar Ficha a WhatsApp"}
-            </button>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => submitRFQ("whatsapp")}
+                disabled={isSubmitting}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "12px 14px", fontSize: "14px" }}
+              >
+                <MessageCircle size={17} />
+                {isSubmitting ? "Procesando…" : "Solicitar por WhatsApp"}
+              </button>
+
+              <button
+                className="btn"
+                type="button"
+                onClick={() => submitRFQ("email")}
+                disabled={isSubmitting}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "12px 14px", fontSize: "14px", background: "var(--navy)", border: "1px solid rgba(255,255,255,0.25)" }}
+              >
+                <Mail size={17} style={{ color: "var(--or)" }} />
+                {isSubmitting ? "Procesando…" : "Enviar por Gmail"}
+              </button>
+            </div>
           </form>
         </div>
       </section>
@@ -2086,7 +2167,13 @@ Solicitado desde famesa.com.ve · Valencia, Carabobo`;
         <div className="w">
           <div className="ftr-grid">
             <div className="ftr-brand">
-              <Image src="/images/logo.jpg" alt="Famesa C.A." width={520} height={305} />
+              <Image 
+                src="/images/logo.png" 
+                alt="FAMESA C.A." 
+                width={200} 
+                height={77} 
+                style={{ height: "48px", width: "auto", objectFit: "contain" }}
+              />
               <strong>{CONTACT.company}</strong>
               <p>
                 {CONTACT.tagline}. Planta industrial en {CONTACT.address.sector},{" "}

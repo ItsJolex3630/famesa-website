@@ -76,7 +76,7 @@ const localBusinessJsonLd = {
   description:
     "Taller de metalmecánica, soldadura especial y mecanizado de plásticos de ingeniería con planta en Valencia, Carabobo, Venezuela.",
   url: CONTACT.siteUrl,
-  logo: `${CONTACT.siteUrl}/images/logo.jpg`,
+  logo: `${CONTACT.siteUrl}/images/logo.png`,
   image: `${CONTACT.siteUrl}/images/hero-bg.jpg`,
   telephone: [
     CONTACT.phones.landline.replace(/\s/g, ""),

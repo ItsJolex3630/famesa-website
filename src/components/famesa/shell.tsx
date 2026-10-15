@@ -427,7 +427,7 @@ export function FamesaShell({
         >
           <input
             className="command-input"
-            placeholder="Escribe código (OT-0089, FAC-00412, Coca-Cola, AISI 4140)..."
+            placeholder="Escribe un código, cliente o material para buscar..."
             value={cmdQuery}
             onChange={(e) => setCmdQuery(e.target.value)}
             autoFocus

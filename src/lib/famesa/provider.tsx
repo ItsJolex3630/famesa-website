@@ -126,7 +126,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       toast.error('Este prospecto ya fue convertido');
       return;
     }
-    const quoteId = `COT-${String(108 + data.cotizaciones.length).padStart(4, '0')}`;
+    const quoteId = `COT-${String(1 + data.cotizaciones.length).padStart(5, '0')}`;
     setData((prev) => ({
       ...prev,
       leads: prev.leads.map((r) => (r.id === id ? { ...r, status: 'cotizado', quote: quoteId } : r)),
@@ -134,7 +134,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
         ? prev.clientes
         : [
             {
-              id: `CLI-00${prev.clientes.length + 1}`,
+              id: `CLI-${String(prev.clientes.length + 1).padStart(5, '0')}`,
               name: lead.client ?? 'Nuevo Cliente Industrial',
               status: 'activo',
               rif: 'Por completar',
@@ -176,7 +176,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       toast.error('Stock insuficiente para reservar material');
       return;
     }
-    const otId = `OT-${String(89 + data.ordenes.length).padStart(4, '0')}`;
+    const otId = `OT-${String(1 + data.ordenes.length).padStart(5, '0')}`;
     setData((prev) => ({
       ...prev,
       cotizaciones: prev.cotizaciones.map((r) => (r.id === id ? { ...r, status: 'aprobada', ot: otId } : r)),
@@ -225,7 +225,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       toast.error('Complete la OT y firme el control de calidad antes de facturar');
       return;
     }
-    const invoiceId = `FAC-${String(412 + data.facturacion.length).padStart(5, '0')}`;
+    const invoiceId = `FAC-${String(1 + data.facturacion.length).padStart(5, '0')}`;
     const totals = invoiceTotals(Number(order.amount), rate);
     const client = data.clientes.find((c) => c.name === order.client);
     setData((prev) => ({
@@ -239,7 +239,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
           amount: totals.total,
           status: 'pendiente',
           paid: 0,
-          control: `00-${String(4120 + prev.facturacion.length).padStart(6, '0')}`,
+          control: `00-${String(1 + prev.facturacion.length).padStart(6, '0')}`,
           ot: id,
           rif: client?.rif,
           address: client?.address,

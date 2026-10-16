@@ -289,7 +289,7 @@ const industries = [
   { name: "Embotellado: líneas de llenado, envasado y tapado", badge: "Estrellas & Guías" },
   { name: "Bandas transportadoras y logística pesada", badge: "Rodillos & Poleas" },
   { name: "Industria papelera y celulosa", badge: "Rodillos Rectificados" },
-  { name: "Siderúrgicas y metalurgia primaria", badge: "Ejes & Bronces" },
+  { name: "Siderúrgicas y metalurgia primaria", badge: "Ejes & Bocinas" },
   { name: "Industrias de procesos químicos y alimentos", badge: "Inoxidable & PTFE" },
   { name: "Metalmecánica general y manufactura", badge: "Mecanizado CNC" },
 ];

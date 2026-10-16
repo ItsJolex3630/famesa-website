@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const rateResult = await db.execute("SELECT value FROM settings WHERE key = 'rate_usd_ves'");
     const rate = num(rateResult.rows[0]?.value, 54.8);
     const user = await currentUser(request);
-    const userEmail = user?.email || "jolex3630@gmail.com";
+    const userEmail = user?.email || "famesa2005@gmail.com";
 
     const clientRows = await rows(
       "SELECT id, name, tax_id, sector, contact_name, phone, address, status, credit_limit_usd, credit_days, is_key_account FROM clients WHERE deleted_at IS NULL ORDER BY id",

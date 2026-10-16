@@ -20,7 +20,7 @@ VALUES (
 
 -- 2. Usuarios y Roles (6 perfiles de prueba + dueño)
 INSERT OR IGNORE INTO users (id, email, name, role, phone, active) VALUES
-  (1, 'jolex3630@gmail.com', 'Joel Medina (Dueño / Director)', 'admin', '+58 412-4090802', 1),
+  (1, 'famesa2005@gmail.com', 'Joel Medina (Dueño / Director)', 'admin', '+58 412-4090802', 1),
   (2, 'gerencia@famesa.com.ve', 'Ing. Roberto Salazar (Gerente de Planta)', 'gerente', '+58 414-4112233', 1),
   (3, 'ventas@famesa.com.ve', 'Lic. Mariana Gómez (Comercial B2B)', 'ventas', '+58 412-4556677', 1),
   (4, 'taller@famesa.com.ve', 'T.S.U. Carlos Méndez (Jefe de Taller)', 'taller', '+58 424-4889900', 1),
@@ -226,7 +226,7 @@ INSERT OR IGNORE INTO expenses (id, code, date, category, description, budgeted_
 
 -- 23. Bitácora de Auditoría (audit_log)
 INSERT INTO audit_log (user_id, user_email, entity, entity_id, action, details, created_at) VALUES
-  (1, 'jolex3630@gmail.com', 'exchange_rates', '3', 'update', 'Actualizó tasa del día a 54.80 Bs./USD (Paralelo / BCV Editable)', '2026-10-12T08:00:00Z'),
+  (1, 'famesa2005@gmail.com', 'exchange_rates', '3', 'update', 'Actualizó tasa del día a 54.80 Bs./USD (Paralelo / BCV Editable)', '2026-10-12T08:00:00Z'),
   (3, 'ventas@famesa.com.ve', 'quotes', 'COT-0108', 'create', 'Creó cotización COT-0108 para Corimon Pinturas C.A. por USD 4,466.00 (Margen 38.0%)', '2026-10-11T11:00:00Z'),
   (6, 'administracion@famesa.com.ve', 'payments', 'PAG-00304', 'create', 'Registró anticipo 50% de Coca-Cola FEMSA en FAC-00412 por USD 4,872.00 (Bs. 266,985.60)', '2026-10-08T16:10:00Z'),
   (4, 'taller@famesa.com.ve', 'orders', 'OT-0088', 'status_change', 'Cambió estado de OT-0088 a control_calidad en Rectificadora REC-01', '2026-10-12T11:30:00Z');

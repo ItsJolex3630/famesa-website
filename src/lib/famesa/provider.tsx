@@ -45,7 +45,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
   const [audits, setAudits] = useState<AuditEntry[]>([
     { time: '12/10/2026, 08:00:00', action: 'Tasa inicial sincronizada: 54.80 Bs./USD (Turso DB famesa)', role: 'admin' },
   ]);
-  const [userEmail, setUserEmail] = useState('jolex3630@gmail.com');
+  const [userEmail, setUserEmail] = useState('famesa2005@gmail.com');
   const [cloudBusy, setCloudBusy] = useState(false);
 
   useEffect(() => {

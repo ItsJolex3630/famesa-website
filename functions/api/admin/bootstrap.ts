@@ -14,7 +14,7 @@ export const onRequest = route("GET", async (ctx: Ctx) => {
   const rate = num(rateResult.rows[0]?.value, 54.8);
 
   const user = await currentUser(ctx);
-  const userEmail = user?.email || "jolex3630@gmail.com";
+  const userEmail = user?.email || "famesa2005@gmail.com";
 
   // --- CRM ---
   const clientRows = await rows(

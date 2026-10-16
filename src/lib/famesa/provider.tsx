@@ -19,6 +19,7 @@ type ContextType = {
   setPeriod: (s: string) => void;
   add: (m: ModuleKey, r: RecordData) => void;
   update: (m: ModuleKey, id: string, patch: Partial<RecordData>) => void;
+  deleteRecord: (m: ModuleKey, id: string) => void;
   convertLead: (id: string) => void;
   approveQuote: (id: string) => void;
   invoiceOrder: (id: string) => void;
@@ -116,6 +117,19 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
+    }).catch(() => {});
+  };
+
+  const deleteRecord = (module: ModuleKey, id: string) => {
+    if (!guard(module)) return;
+    setData((prev) => ({
+      ...prev,
+      [module]: prev[module].filter((r) => r.id !== id),
+    }));
+    audit(`Eliminación de ${id} en ${module}`);
+    toast.success(`Registro ${id} eliminado correctamente`);
+    void fetch(`/api/admin/${module}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
     }).catch(() => {});
   };
 
@@ -415,6 +429,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
         setPeriod: setPeriodState,
         add,
         update,
+        deleteRecord,
         convertLead,
         approveQuote,
         invoiceOrder,

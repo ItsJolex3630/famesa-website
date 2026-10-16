@@ -37,6 +37,19 @@ const COPYRIGHT_YEAR = new Date().getFullYear();
 // 1. DATA: Servicios
 const services = [
   {
+    id: "imp",
+    title: "Fabricación y maquinado de impulsores de bronce",
+    category: "metalmecanica",
+    desc: "Impulsores cerrados y abiertos para bombas centrífugas, turbinas y sistemas de bombeo en bronce fosforado y aleaciones especiales.",
+    tags: ["Fundición y Torneado CNC", "Bronce SAE 64/660", "Balanceo dinámico"],
+    img: "/images/service-impulsores.jpg",
+    detailImg: "/images/service-impulsores.jpg",
+    detailTitle: "Control Dimensional & Balanceo Dinámico de Impulsores",
+    detailDesc:
+      "Fabricación integral y maquinado de precisión con control micrométrico (±0.005 mm) en aleaciones de bronce fosforado SAE 64/660 para bombas centrífugas y turbinas industriales.",
+    tolerance: "±0.005 mm",
+  },
+  {
     id: "rod",
     title: "Fabricación y rectificado de rodillos",
     category: "metalmecanica",

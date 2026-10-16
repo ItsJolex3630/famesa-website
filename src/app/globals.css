@@ -107,6 +107,20 @@ nav a.l {
   }
 }
 
+/* Compacta la navegación en anchos intermedios para evitar desbordamiento
+   horizontal al mostrarse todos los enlaces del menú. */
+@media (min-width: 860px) and (max-width: 1240px) {
+  nav .w {
+    gap: 12px;
+  }
+  .nl {
+    gap: 13px;
+  }
+  nav a.l {
+    font-size: 13px;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   nav a.l:hover {
     color: var(--bl);
@@ -1207,5 +1221,137 @@ footer.ftr .w {
   }
   .ftr-brand p {
     max-width: none;
+  }
+}
+
+/* ========================================================= */
+/* SECCIÓN EQUIPO HUMANO Y TÉCNICO · BENTO GRID               */
+/* ========================================================= */
+.equipo-bento-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.equipo-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  min-height: 340px;
+  border: 1px solid var(--st2);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--navy);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.3s var(--eo), box-shadow 0.3s var(--eo), border-color 0.3s var(--eo);
+}
+
+.equipo-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--bl);
+  box-shadow: 0 12px 30px rgba(10, 26, 58, 0.15);
+}
+
+.equipo-card:hover .equipo-card-img {
+  transform: scale(1.04);
+}
+
+.equipo-card:focus-visible {
+  outline: 3px solid var(--bl);
+  outline-offset: 2px;
+}
+
+.equipo-card-img {
+  object-fit: cover;
+  transition: transform 0.5s var(--eo);
+}
+
+.equipo-card-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 22px 20px;
+  background: linear-gradient(to top, rgba(10, 26, 58, 0.92) 0%, rgba(10, 26, 58, 0.45) 55%, transparent 100%);
+  color: #fff;
+}
+
+.equipo-card-tag {
+  display: inline-block;
+  font: 700 11px var(--h);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--or);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 99px;
+  padding: 4px 12px;
+  margin-bottom: 10px;
+}
+
+.equipo-card-title {
+  display: block;
+  font: 700 clamp(20px, 2.2vw, 26px) / 1.05 var(--h);
+  text-transform: uppercase;
+  margin: 0 0 6px;
+  color: #fff;
+}
+
+.equipo-card-desc {
+  display: block;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.equipo-card-zoom {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 26, 58, 0.55);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.3s var(--eo), transform 0.3s var(--eo);
+  pointer-events: none;
+}
+
+.equipo-card:hover .equipo-card-zoom,
+.equipo-card:focus-visible .equipo-card-zoom {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (min-width: 680px) {
+  .equipo-bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-flow: dense;
+  }
+  .equipo-card--wide {
+    grid-column: span 2;
+    min-height: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .equipo-bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-flow: dense;
+  }
+  .equipo-card {
+    min-height: 400px;
+  }
+  .equipo-card--wide {
+    grid-column: span 2;
+    min-height: 330px;
   }
 }

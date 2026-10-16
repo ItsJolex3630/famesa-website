@@ -379,6 +379,58 @@ const tallerPhotos = [
   },
 ];
 
+// Equipo humano y técnico de Famesa C.A. (fotografías reales de planta y maestranza).
+const equipoPhotos = [
+  {
+    id: "equipo-planta",
+    src: "/images/equipo/famesa-equipo-planta.jpg",
+    tag: "Maestranza y Planta",
+    title: "Equipo Técnico Famesa C.A.",
+    desc: "Personal multidisciplinario con más de 20 años de experiencia técnica en torneado pesado, fresado universal, matricería y soldaduras especiales.",
+    caption:
+      "Maestros torneros, fresadores y ajustadores del equipo técnico de Famesa C.A. en la nave central del taller, Santa Rosa, Valencia.",
+    aspect: "landscape",
+    width: 1900,
+    height: 1425,
+  },
+  {
+    id: "fresado-correa",
+    src: "/images/equipo/famesa-fresado-correa.jpg",
+    tag: "Fresado Universal",
+    title: "Mecanizado en Fresadora Correa F.",
+    desc: "Ajuste milimétrico y planeado de componentes mecánicos con control riguroso de tolerancias y acabados superficiales.",
+    caption:
+      "Operador especialista realizando ajustes finos en la fresadora universal Correa F. con control micrométrico de tolerancias.",
+    aspect: "portrait",
+    width: 1400,
+    height: 1875,
+  },
+  {
+    id: "torno-bancada",
+    src: "/images/equipo/famesa-torno-bancada.jpg",
+    tag: "Tornería Pesada",
+    title: "Torneado de Gran Bancada",
+    desc: "Mecanizado longitudinal de ejes, rodillos y cilindros de gran capacidad para la industria papelera, química y de manufactura.",
+    caption:
+      "Tornero mecánico operando un torno paralelo de gran bancada para el mecanizado longitudinal de ejes y cilindros industriales.",
+    aspect: "landscape",
+    width: 1900,
+    height: 1425,
+  },
+  {
+    id: "torno-ajuste",
+    src: "/images/equipo/famesa-torno-ajuste.jpg",
+    tag: "Ajuste y Verificación",
+    title: "Montaje y Centrado Dimensional",
+    desc: "Preparación de piezas sobre mandril con verificación mediante reloj comparador e iluminación focalizada previa a desbaste.",
+    caption:
+      "Mecánico preparando y ajustando el mandril del torno paralelo con verificación dimensional bajo lámpara de inspección focalizada.",
+    aspect: "portrait",
+    width: 1400,
+    height: 1867,
+  },
+];
+
 // Catálogo de trabajos del dossier corporativo, agrupado por línea de trabajo.
 const catalogoTrabajos = [
   {
@@ -475,7 +527,15 @@ const catalogoConIndice = (() => {
   });
 })();
 
-const galleryPhotos = [
+type GalleryPhoto = {
+  src: string;
+  title: string;
+  caption: string;
+  width?: number;
+  height?: number;
+};
+
+const galleryPhotos: GalleryPhoto[] = [
   ...tallerPhotos,
   ...catalogoTrabajos.flatMap((cat) =>
     cat.images.map((file, i) => ({
@@ -484,7 +544,19 @@ const galleryPhotos = [
       caption: `Trabajo realizado por FAMESA C.A. — ${cat.title.toLowerCase()}.`,
     })),
   ),
+  // Fotografías del equipo técnico: se anexan al final para preservar el
+  // cálculo de índices ya usado por el taller y el catálogo.
+  ...equipoPhotos.map((p) => ({
+    src: p.src,
+    title: p.title,
+    caption: p.caption,
+    width: p.width,
+    height: p.height,
+  })),
 ];
+
+// Índice base de la primera fotografía del equipo dentro de `galleryPhotos`.
+const equipoStart = galleryPhotos.length - equipoPhotos.length;
 
 const sparks = [
   { x: "58%", t: "3.2s", d: "0.4s", dx: "75px" },
@@ -567,7 +639,7 @@ export default function HomePage() {
     rvElements.forEach((el) => observer.observe(el));
 
     // Nav active section spy
-    const sectionIds = ["servicios", "catalogo", "piezas", "industrias", "empresa", "materiales", "taller", "proceso", "calidad", "clientes", "faq", "cotiza"];
+    const sectionIds = ["servicios", "catalogo", "piezas", "industrias", "empresa", "equipo", "materiales", "taller", "proceso", "calidad", "clientes", "faq", "cotiza"];
     const sectionObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
@@ -912,6 +984,13 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
               aria-current={activeSection === "empresa" ? "true" : undefined}
             >
               Empresa
+            </a>
+            <a
+              className="l"
+              href="#equipo"
+              aria-current={activeSection === "equipo" ? "true" : undefined}
+            >
+              Equipo
             </a>
             <a
               className="l"
@@ -1447,6 +1526,52 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
             <p style={{ margin: "14px 0 0", fontSize: "13px", color: "var(--mu)" }}>
               Instalaciones adecuadas a la organización y al servicio que prestamos, en {CONTACT.address.sector}, {CONTACT.address.city}, {CONTACT.address.state}.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 8c. EQUIPO HUMANO Y TÉCNICO FAMESA C.A. */}
+      <section id="equipo">
+        <div className="w">
+          <div style={{ maxWidth: "760px", marginBottom: "40px" }} className="rv">
+            <span className="tag" style={{ color: "var(--bl)" }}>
+              Talento Humano y Maestranza
+            </span>
+            <h2>El equipo detrás de cada mecanizado de precisión</h2>
+            <p className="sub" style={{ color: "var(--mu)", fontSize: "16px", lineHeight: "1.6" }}>
+              Más de dos décadas de experiencia técnica combinada en planta. Maestros torneros, fresadores y ajustadores dedicados a garantizar tolerancias milimétricas y confiabilidad operativa para la industria venezolana. Haz clic en cualquier imagen para ampliarla.
+            </p>
+          </div>
+
+          <div className="equipo-bento-grid">
+            {equipoPhotos.map((photo, idx) => (
+              <button
+                key={photo.id}
+                type="button"
+                className={`equipo-card rv${photo.aspect === "landscape" ? " equipo-card--wide" : ""}`}
+                style={{ ["--i" as string]: idx.toString() }}
+                onClick={() => openLightboxByIndex(equipoStart + idx)}
+                aria-label={`Ampliar fotografía: ${photo.title}`}
+                title={`Ampliar: ${photo.title}`}
+              >
+                <Image
+                  className="equipo-card-img"
+                  src={photo.src}
+                  alt={`${photo.title} — ${photo.tag} de Famesa C.A.`}
+                  fill
+                  sizes="(min-width: 1024px) 50vw, (min-width: 680px) 50vw, 100vw"
+                  quality={85}
+                />
+                <span className="equipo-card-zoom" aria-hidden="true">
+                  <Maximize2 size={16} />
+                </span>
+                <div className="equipo-card-overlay">
+                  <span className="equipo-card-tag">{photo.tag}</span>
+                  <span className="equipo-card-title">{photo.title}</span>
+                  <span className="equipo-card-desc">{photo.desc}</span>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </section>
@@ -2625,7 +2750,7 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
                     fontWeight: 700,
                   }}
                 >
-                  Fotografía Real · Taller Famesa
+                  {lightboxIndex >= equipoStart ? "Fotografía Real · Equipo Famesa" : "Fotografía Real · Taller Famesa"}
                 </span>
                 <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.6)", marginLeft: "10px" }}>
                   ({lightboxIndex + 1} de {galleryPhotos.length})
@@ -2665,8 +2790,8 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
               <Image
                 src={galleryPhotos[lightboxIndex].src}
                 alt={galleryPhotos[lightboxIndex].title}
-                width={1264}
-                height={848}
+                width={galleryPhotos[lightboxIndex].width ?? 1264}
+                height={galleryPhotos[lightboxIndex].height ?? 848}
                 sizes="90vw"
                 style={{
                   width: "100%",

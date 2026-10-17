@@ -1402,3 +1402,19 @@ footer.ftr .w {
   animation: ellipsisAnimation 1.5s infinite steps(1);
 }
 
+/* Blindaje de contraste del widget del asistente (scope .famesa-assistant). */
+.famesa-assistant {
+  color-scheme: dark;
+}
+
+.famesa-assistant ::selection {
+  background: #ff8a1f;
+  color: #0a1a3a;
+}
+
+.famesa-assistant input::placeholder,
+.famesa-assistant textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+

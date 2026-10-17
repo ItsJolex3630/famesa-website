@@ -40,7 +40,23 @@ const config: Config = {
         surface: "#FFFFFF",
         navy: "#0A1A3A",
         electric: "#003AD7",
-        orange: "#FF8A1F",
+        // Paleta naranja completa (50–950) con el corporativo #FF8A1F en 500.
+        // Definirla como objeto (no string) evita sobreescribir la escala estándar
+        // y garantiza que `bg-orange-500`, `text-orange-400`, etc. compilen.
+        orange: {
+          DEFAULT: "#FF8A1F",
+          50: "#FFF7ED",
+          100: "#FFEDD5",
+          200: "#FED7AA",
+          300: "#FDBA74",
+          400: "#FB923C",
+          500: "#FF8A1F",
+          600: "#EA580C",
+          700: "#C2410C",
+          800: "#9A3412",
+          900: "#7C2D12",
+          950: "#431407",
+        },
         input: "#C8D2E0",
         destructive: {
           DEFAULT: "#DC2626",

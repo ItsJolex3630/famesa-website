@@ -39,7 +39,7 @@ export function ServiceCatalogCard({ card, onQuote }: ServiceCatalogCardProps) {
           />
         </span>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-orange-400">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#FF8A1F]">
             {card.category}
           </p>
           <h4 className="font-heading text-base font-bold leading-tight text-white">
@@ -55,17 +55,17 @@ export function ServiceCatalogCard({ card, onQuote }: ServiceCatalogCardProps) {
         <ul className="space-y-1 border-t border-slate-700/70 px-3 py-2">
           {card.specs.slice(0, 3).map((spec) => (
             <li key={spec} className="flex items-start gap-1.5 text-[11px] text-slate-300">
-              <Wrench className="mt-0.5 h-3 w-3 shrink-0 text-orange-400" aria-hidden="true" />
+              <Wrench className="mt-0.5 h-3 w-3 shrink-0 text-[#FF8A1F]" aria-hidden="true" />
               <span>{spec}</span>
             </li>
           ))}
         </ul>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 border-t border-slate-700/70 p-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-slate-700/70 bg-slate-900/50 p-3">
         <a
           href="/#catalogo"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 transition-colors hover:border-slate-400 hover:text-white"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-[11px] font-semibold text-slate-200 transition-colors hover:border-slate-400 hover:bg-slate-700 hover:text-white"
         >
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
           Ver detalle en web
@@ -73,7 +73,7 @@ export function ServiceCatalogCard({ card, onQuote }: ServiceCatalogCardProps) {
         <button
           type="button"
           onClick={handleQuote}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-2.5 py-1.5 text-[11px] font-bold text-slate-950 transition-colors hover:bg-orange-400"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#FF8A1F] px-3 py-1.5 text-[11px] font-bold text-[#0A1A3A] shadow-sm transition-all hover:bg-[#e67a17] active:scale-95"
         >
           <FileText className="h-3.5 w-3.5" aria-hidden="true" />
           Cotizar esta línea

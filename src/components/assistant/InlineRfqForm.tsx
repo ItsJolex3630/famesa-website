@@ -268,14 +268,14 @@ export function InlineRfqForm({ prefill, onSuccess }: InlineRfqFormProps) {
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-orange-500 px-3 py-2 text-sm font-bold text-slate-950 transition-colors hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF8A1F] px-4 py-2.5 text-sm font-bold text-[#0A1A3A] shadow-md transition-all hover:bg-[#e67a17] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting ? (
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          <Loader2 className="h-4 w-4 animate-spin text-[#0A1A3A]" aria-hidden="true" />
         ) : (
-          <Send className="h-4 w-4" aria-hidden="true" />
+          <Send className="h-4 w-4 text-[#0A1A3A]" aria-hidden="true" />
         )}
-        {submitting ? "Enviando…" : "Enviar solicitud"}
+        {submitting ? "Enviando solicitud…" : "Enviar solicitud de cotización"}
       </button>
 
       <p className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400">

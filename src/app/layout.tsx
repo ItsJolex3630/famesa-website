@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Barlow_Condensed, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { CONTACT } from "@/lib/contact-data";
+import { AssistantLauncher } from "@/components/assistant/AssistantLauncher";
+import { FamesaAssistantWidget } from "@/components/assistant/FamesaAssistantWidget";
 import "./globals.css";
 
 const barlowCondensed = Barlow_Condensed({
@@ -125,6 +127,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
         />
         {children}
+        {/* Asistente Virtual Industrial (se autoexcluye en /admin) */}
+        <AssistantLauncher />
+        <FamesaAssistantWidget />
         <Toaster position="top-right" richColors closeButton />
       </body>
     </html>

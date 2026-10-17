@@ -11,6 +11,8 @@ export interface Env {
   ADMIN_JWT_SECRET?: string;
   ADMIN_DEV_PASSWORD?: string;
   GOOGLE_CLIENT_ID?: string;
+  /** Clave opcional del asistente virtual. Si falta, se usa el motor local. */
+  GEMINI_API_KEY?: string;
 }
 
 /** Contexto de Cloudflare Pages Function (subconjunto que consumimos). */

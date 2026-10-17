@@ -210,6 +210,16 @@ async function requestAssistant(prompt: string): Promise<AssistantMessage> {
   return payload.reply;
 }
 
+/**
+ * Calcula un retardo humano de tipeo realista (entre 600ms y 1400ms)
+ * para que el usuario aprecie el estado 'Escribiendo...' exactamente como en WhatsApp.
+ */
+function calculateHumanTypingDelay(textLength: number): number {
+  const base = 700;
+  const variable = Math.min(Math.floor(textLength * 3.5), 900);
+  return base + variable;
+}
+
 export async function sendMessage(rawText: string): Promise<void> {
   const text = rawText.slice(0, 500).trim();
   if (!text || state.isThinking) return;
@@ -221,13 +231,23 @@ export async function sendMessage(rawText: string): Promise<void> {
     content: text,
     timestamp: Date.now(),
   });
+
+  // Activa el estado 'Escribiendo...' en la cabecera y el TypingBubble en el chat.
   setState({ isThinking: true, mood: "thinking" });
 
+  const startTime = Date.now();
   let reply: AssistantMessage;
   try {
     reply = await requestAssistant(text);
   } catch {
     reply = localReply(text, state.messages);
+  }
+
+  // Garantiza que la animación de 'Escribiendo...' permanezca el tiempo humano necesario.
+  const elapsed = Date.now() - startTime;
+  const targetDelay = calculateHumanTypingDelay(reply.content.length);
+  if (elapsed < targetDelay) {
+    await new Promise((resolve) => setTimeout(resolve, targetDelay - elapsed));
   }
 
   appendMessage(reply);

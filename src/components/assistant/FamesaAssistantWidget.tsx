@@ -14,16 +14,12 @@ import type { AssistantMessage } from "@/types/assistant";
 
 function TypingBubble() {
   return (
-    <div className="flex items-end gap-2">
+    <div className="flex items-end gap-2 animate-in fade-in duration-200">
       <MascotAvatar mood="thinking" size={28} />
-      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-slate-800 px-3 py-2.5">
-        {[0, 1, 2].map((dot) => (
-          <span
-            key={dot}
-            className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400"
-            style={{ animationDelay: `${dot * 150}ms` }}
-          />
-        ))}
+      <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm border border-slate-700/60 bg-slate-800/95 px-4 py-3 shadow-md">
+        <span className="whatsapp-dot" style={{ animationDelay: "0ms" }} />
+        <span className="whatsapp-dot" style={{ animationDelay: "180ms" }} />
+        <span className="whatsapp-dot" style={{ animationDelay: "360ms" }} />
       </div>
     </div>
   );
@@ -145,9 +141,22 @@ export function FamesaAssistantWidget() {
           <p className="font-heading text-sm font-bold leading-tight text-white">
             Ing. Asistente FAMESA
           </p>
-          <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-            {isThinking ? "Analizando tu consulta…" : "Asesor técnico en línea"}
+          <p className="flex items-center gap-1.5 text-[11px] transition-colors">
+            <span
+              className={cn(
+                "h-2 w-2 rounded-full",
+                isThinking ? "animate-pulse bg-emerald-400" : "bg-emerald-500",
+              )}
+              aria-hidden="true"
+            />
+            {isThinking ? (
+              <span className="font-medium text-emerald-400">
+                Escribiendo
+                <span className="whatsapp-dots" aria-hidden="true" />
+              </span>
+            ) : (
+              <span className="text-slate-400">Asesor técnico en línea</span>
+            )}
           </p>
         </div>
         <button

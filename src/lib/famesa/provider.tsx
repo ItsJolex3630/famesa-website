@@ -1,14 +1,34 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { makeSeed, makeEmptyStore, invoiceTotals, type DataStore, type ModuleKey, type RecordData, type Role, canAccess } from './data';
 
 export type AuditEntry = { time: string; action: string; role: Role };
 
+export type RateType = 'bcv_usd' | 'bcv_eur' | 'usdt';
+
+export type RatesState = {
+  bcv_usd: number;
+  bcv_eur: number;
+  usdt: number;
+};
+
+const DEFAULT_RATES: RatesState = { bcv_usd: 880.12, bcv_eur: 985.73, usdt: 1004.65 };
+const RATE_TYPE_STORAGE_KEY = 'famesa_active_rate_type';
+const RATES_POLLING_MS = 15 * 60 * 1000;
+
+const isRateType = (v: unknown): v is RateType => v === 'bcv_usd' || v === 'bcv_eur' || v === 'usdt';
+
 type ContextType = {
   data: DataStore;
   rate: number;
+  activeRateType: RateType;
+  rates: RatesState;
+  ratesLoading: boolean;
+  ratesUpdatedAt: string | null;
+  selectRateType: (type: RateType) => void;
+  refreshRates: () => Promise<void>;
   mirror: boolean;
   role: Role;
   period: string;
@@ -38,12 +58,26 @@ const Context = createContext<ContextType | null>(null);
 
 export function FamesaProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<DataStore>(makeSeed);
-  const [rate, setRateState] = useState(54.8);
+  const [rates, setRatesState] = useState<RatesState>(DEFAULT_RATES);
+  const [activeRateType, setActiveRateTypeState] = useState<RateType>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem(RATE_TYPE_STORAGE_KEY);
+      if (isRateType(saved)) return saved;
+    }
+    return 'bcv_usd';
+  });
+  const [rate, setRateState] = useState(DEFAULT_RATES.bcv_usd);
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [ratesUpdatedAt, setRatesUpdatedAt] = useState<string | null>(null);
+  const ratesRef = useRef(rates);
+  ratesRef.current = rates;
+  const activeRateTypeRef = useRef(activeRateType);
+  activeRateTypeRef.current = activeRateType;
   const [mirror, setMirrorState] = useState(true);
   const [role, setRoleState] = useState<Role>('admin');
   const [period, setPeriodState] = useState('Octubre 2026');
   const [audits, setAudits] = useState<AuditEntry[]>([
-    { time: '12/10/2026, 08:00:00', action: 'Tasa inicial sincronizada: 54.80 Bs./USD (Turso DB famesa)', role: 'admin' },
+    { time: '12/10/2026, 08:00:00', action: 'Tasas iniciales sincronizadas: BCV $ 880.12 · BCV € 985.73 · USDT ₮ 1004.65 (Turso DB famesa)', role: 'admin' },
   ]);
   const [userEmail, setUserEmail] = useState('famesa2005@gmail.com');
   const [cloudBusy, setCloudBusy] = useState(false);
@@ -92,6 +126,54 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ rate_usd_ves: n }),
     }).catch(() => {});
   };
+
+  const selectRateType = (type: RateType) => {
+    const value = ratesRef.current[type];
+    setActiveRateTypeState(type);
+    activeRateTypeRef.current = type;
+    setRateState(value);
+    try {
+      window.localStorage.setItem(RATE_TYPE_STORAGE_KEY, type);
+    } catch {
+      // Almacenamiento no disponible
+    }
+    audit(`Tasa activa cambiada a ${type.toUpperCase()}: ${value.toFixed(2)} Bs.`);
+    toast.success(`Tasa activa: ${type.toUpperCase().replace('_', ' ')} · ${value.toFixed(2)} Bs.`);
+  };
+
+  const refreshRates = async () => {
+    setRatesLoading(true);
+    try {
+      const res = await fetch('/api/rates');
+      if (!res.ok) throw new Error('rates fetch failed');
+      const payload = (await res.json()) as {
+        ok?: boolean;
+        updated_at?: string;
+        rates?: Partial<RatesState>;
+      };
+      if (payload?.ok && payload.rates) {
+        const next = { ...ratesRef.current };
+        (Object.keys(next) as RateType[]).forEach((key) => {
+          const value = Number(payload.rates?.[key]);
+          if (Number.isFinite(value) && value > 0) next[key] = value;
+        });
+        setRatesState(next);
+        ratesRef.current = next;
+        setRateState(next[activeRateTypeRef.current]);
+        setRatesUpdatedAt(payload.updated_at ?? null);
+      }
+    } catch {
+      // Se mantienen las tasas previas; el endpoint nunca bloquea la operación
+    } finally {
+      setRatesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshRates();
+    const interval = setInterval(() => void refreshRates(), RATES_POLLING_MS);
+    return () => clearInterval(interval);
+  }, []);
 
   const add = (module: ModuleKey, r: RecordData) => {
     if (!guard(module)) return;
@@ -413,6 +495,12 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       value={{
         data,
         rate,
+        activeRateType,
+        rates,
+        ratesLoading,
+        ratesUpdatedAt,
+        selectRateType,
+        refreshRates,
         mirror,
         role,
         period,

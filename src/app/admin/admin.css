@@ -39,3 +39,18 @@ section.settings-section{background:var(--surface)}
 .erp-layout nav .w{display:block;height:auto}
 .erp-layout header{position:static}
 .erp-layout footer{background:transparent;padding:0;border:0;font-size:inherit;color:inherit}
+
+/* ==========================================================================
+   CONMUTADOR INDUSTRIAL DE TASAS (BCV USD, BCV EUR, USDT)
+   ========================================================================== */
+.rates-switcher{display:inline-flex;align-items:stretch;background:var(--surface-low);border:1px solid var(--silver-dark);border-radius:0px;overflow:hidden;height:34px}
+.rate-pill{display:inline-flex;align-items:center;gap:6px;padding:0 10px;background:transparent;border:none;border-right:1px solid var(--silver-dark);border-radius:0px;cursor:pointer;font-size:10px;color:var(--muted);transition:all .15s ease;white-space:nowrap}
+.rate-pill:hover{background:rgba(0,41,159,.05);color:var(--foreground)}
+.rate-pill.active{background:var(--navy);color:#fff;font-weight:600;box-shadow:inset 0 -2px 0 0 var(--orange)}
+.rate-pill .rate-currency{font-size:9px;letter-spacing:.05em;font-weight:700;opacity:.85}
+.rate-pill.active .rate-currency{color:var(--orange);opacity:1}
+.rate-pill .rate-val{font-family:var(--font-mono);font-size:11px}
+.rate-sync-btn{display:inline-flex;align-items:center;justify-content:center;padding:0 8px;background:transparent;border:none;cursor:pointer;border-radius:0px;color:var(--muted);transition:background .15s ease}
+.rate-sync-btn:hover{background:rgba(0,41,159,.08);color:var(--primary)}
+@media(max-width:1200px){.rate-pill{padding:0 7px;gap:4px;font-size:9px}.rate-pill .rate-val{font-size:10px}}
+@media(max-width:760px){.rates-switcher{height:30px}.rate-pill{padding:0 5px;gap:3px}.rate-pill .rate-currency{font-size:8px}.rate-pill .rate-val{font-size:9px}.rate-sync-btn{display:none}}

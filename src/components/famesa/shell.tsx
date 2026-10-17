@@ -36,7 +36,7 @@ import {
   type Role,
   type RecordData,
 } from '@/lib/famesa/data';
-import { Modal, Field } from './shared';
+import { Modal } from './shared';
 import { RecordDialog, type DialogState } from './modules';
 
 const navGroups: Array<{
@@ -94,14 +94,8 @@ export function FamesaShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [cmdQuery, setCmdQuery] = useState('');
-  const [rateOpen, setRateOpen] = useState(false);
-  const [rateInput, setRateInput] = useState(String(f.rate));
   const [quickOpen, setQuickOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
-
-  useEffect(() => {
-    setRateInput(String(f.rate));
-  }, [f.rate]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -234,16 +228,51 @@ export function FamesaShell({
           </div>
 
           <div className="topbar-tools">
-            <button
-              type="button"
-              className="rate-button"
-              onClick={() => setRateOpen(true)}
-              title="Editar tasa de cambio Bs./USD"
-            >
-              <RefreshCw size={12} className="text-primary" />
-              <span>TASA HOY:</span>
-              <strong>{f.rate.toFixed(2)} Bs./USD</strong>
-            </button>
+            <div className="rates-switcher" role="group" aria-label="Selector de tasa de cambio">
+              <button
+                type="button"
+                className={`rate-pill ${f.activeRateType === 'bcv_usd' ? 'active' : ''}`}
+                onClick={() => f.selectRateType('bcv_usd')}
+                title="Tasa Oficial BCV Dólar (Banco Central de Venezuela)"
+              >
+                <span className="rate-currency">BCV $</span>
+                <strong className="rate-val">{f.rates.bcv_usd.toFixed(2)}</strong>
+              </button>
+
+              <button
+                type="button"
+                className={`rate-pill ${f.activeRateType === 'bcv_eur' ? 'active' : ''}`}
+                onClick={() => f.selectRateType('bcv_eur')}
+                title="Tasa Oficial BCV Euro (Banco Central de Venezuela)"
+              >
+                <span className="rate-currency">BCV €</span>
+                <strong className="rate-val">{f.rates.bcv_eur.toFixed(2)}</strong>
+              </button>
+
+              <button
+                type="button"
+                className={`rate-pill ${f.activeRateType === 'usdt' ? 'active' : ''}`}
+                onClick={() => f.selectRateType('usdt')}
+                title="Tasa Cripto / Binance P2P USDT"
+              >
+                <span className="rate-currency">USDT ₮</span>
+                <strong className="rate-val">{f.rates.usdt.toFixed(2)}</strong>
+              </button>
+
+              <button
+                type="button"
+                className="rate-sync-btn"
+                onClick={() => void f.refreshRates()}
+                title={
+                  f.ratesLoading
+                    ? 'Actualizando tasas...'
+                    : `Actualizado: ${f.ratesUpdatedAt ? new Date(f.ratesUpdatedAt).toLocaleString('es-VE') : 'En vivo'}. Clic para refrescar.`
+                }
+                disabled={f.ratesLoading}
+              >
+                <RefreshCw size={11} className={`text-primary ${f.ratesLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
 
             <label className="mirror-toggle">
               <input
@@ -381,42 +410,6 @@ export function FamesaShell({
           onClose={() => onDialog(null)}
           onChange={(next) => onDialog(next)}
         />
-      )}
-
-      {rateOpen && (
-        <Modal
-          title="Actualizar Tasa de Cambio (Bs./USD)"
-          subtitle="Afecta equivalencias en vivo; facturas emitidas conservan su tasa histórica congelada"
-          onClose={() => setRateOpen(false)}
-          footer={
-            <>
-              <Button variant="outline" onClick={() => setRateOpen(false)}>
-                CANCELAR
-              </Button>
-              <Button
-                variant="industrial"
-                onClick={() => {
-                  f.setRate(Number(rateInput));
-                  setRateOpen(false);
-                }}
-              >
-                GUARDAR TASA
-              </Button>
-            </>
-          }
-        >
-          <div className="form-grid">
-            <Field label="Tasa del día (Bs. por 1 USD)" full>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={rateInput}
-                onChange={(e) => setRateInput(e.target.value)}
-              />
-            </Field>
-          </div>
-        </Modal>
       )}
 
       {cmdOpen && (

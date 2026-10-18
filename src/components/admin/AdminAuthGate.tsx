@@ -20,7 +20,91 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [lockSeconds, setLockSeconds] = useState(0);
+  const [googleReady, setGoogleReady] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+
+  // Inicializar Google Sign-In SDK
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+
+    const setupGoogle = () => {
+      const g = (window as unknown as {
+        google?: {
+          accounts?: {
+            id?: {
+              initialize: (config: Record<string, unknown>) => void;
+              renderButton: (el: HTMLElement, opts: Record<string, unknown>) => void;
+              prompt: () => void;
+            };
+          };
+        };
+      })?.google;
+
+      if (g?.accounts?.id && googleBtnRef.current) {
+        g.accounts.id.initialize({
+          client_id: clientId || "famesa-oauth.apps.googleusercontent.com",
+          callback: async (res: { credential?: string }) => {
+            if (!res.credential) return;
+            setBusy(true);
+            setError("");
+            try {
+              const r = await fetch("/api/auth/google", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ credential: res.credential }),
+              });
+              const data = await r.json().catch(() => null);
+              if (r.ok && data?.ok && data.user?.isAdmin) {
+                if (data.token) {
+                  sessionStorage.setItem("famesa_admin_token", data.token);
+                  localStorage.setItem("famesa_admin_token", data.token);
+                }
+                if (data.user.adminKey) {
+                  localStorage.setItem("famesa_admin_key", data.user.adminKey);
+                  localStorage.setItem("kt_admin_key", data.user.adminKey);
+                }
+                localStorage.setItem("famesa_admin_user", JSON.stringify(data.user));
+                localStorage.setItem("kt_admin_user", JSON.stringify(data.user));
+                localStorage.setItem("kt_user", JSON.stringify(data.user));
+                await f.loadCloud();
+                onUnlocked();
+              } else {
+                setError(
+                  data?.error ||
+                    "Acceso denegado: Tu cuenta de Google no tiene rol de Administrador.",
+                );
+              }
+            } catch {
+              setError("Error al autenticar con Google. Reintenta.");
+            } finally {
+              setBusy(false);
+            }
+          },
+          auto_select: true,
+          auto_prompt: false,
+        });
+
+        googleBtnRef.current.innerHTML = "";
+        g.accounts.id.renderButton(googleBtnRef.current, {
+          type: "standard",
+          shape: "pill",
+          theme: "filled_blue",
+          size: "large",
+          text: "signin_with",
+          locale: "es",
+          width: 340,
+        });
+        setGoogleReady(true);
+      } else {
+        timer = setTimeout(setupGoogle, 300);
+      }
+    };
+
+    setupGoogle();
+    return () => clearTimeout(timer);
+  }, [f, onUnlocked]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -71,8 +155,11 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
 
       try {
         sessionStorage.setItem("famesa_admin_token", payload.token);
+        localStorage.setItem("famesa_admin_token", payload.token);
+        localStorage.setItem("famesa_admin_key", key);
+        localStorage.setItem("kt_admin_key", key);
       } catch {
-        /* sessionStorage no disponible */
+        /* storage no disponible */
       }
       setApiKey("");
       await f.loadCloud();
@@ -167,9 +254,56 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
             </h1>
           </div>
           <p style={{ fontSize: "11px", color: "var(--muted)", margin: "0 0 20px", lineHeight: 1.6 }}>
-            El acceso a los datos operativos, clientes y facturación de FAMESA SUITE requiere la
-            Clave API de Administrador. Todas las peticiones quedan auditadas.
+            Accede mediante Google OAuth verificado (administradores autorizados) o con tu Clave
+            API Maestra de Administrador. Todas las peticiones quedan auditadas.
           </p>
+
+          {/* Botón de acceso automático con Google OAuth */}
+          <div style={{ marginBottom: "22px" }}>
+            <div
+              style={{
+                fontSize: "10px",
+                fontWeight: 600,
+                color: "var(--muted)",
+                letterSpacing: ".06em",
+                textTransform: "uppercase",
+                marginBottom: "10px",
+              }}
+            >
+              Acceso Directo con Google
+            </div>
+            <div
+              ref={googleBtnRef}
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                minHeight: "44px",
+                width: "100%",
+              }}
+            />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                margin: "20px 0 16px",
+              }}
+            >
+              <div style={{ flex: 1, height: "1px", background: "var(--silver-dark)" }} />
+              <span
+                style={{
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  color: "var(--muted)",
+                  letterSpacing: ".08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                O CON CLAVE MANUAL
+              </span>
+              <div style={{ flex: 1, height: "1px", background: "var(--silver-dark)" }} />
+            </div>
+          </div>
 
           <label
             className="eyebrow"

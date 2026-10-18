@@ -26,16 +26,58 @@ function AdminGate({ children }: { children: ReactNode }) {
     return () => registerFamesaDialog(null);
   }, []);
 
-  // Estado inicial: solo un token de sesión presente habilita el panel.
+  // Estado inicial: valida token permanente en localStorage o sessionStorage
   useEffect(() => {
-    let token: string | null = null;
-    try {
-      token = sessionStorage.getItem(SESSION_TOKEN_KEY);
-    } catch {
-      token = null;
+    let isCancelled = false;
+
+    async function checkAuth() {
+      try {
+        const storedToken =
+          sessionStorage.getItem(SESSION_TOKEN_KEY) ||
+          localStorage.getItem(SESSION_TOKEN_KEY);
+        if (storedToken) {
+          if (!isCancelled) {
+            setAuth("unlocked");
+            void f.loadCloud();
+          }
+          return;
+        }
+
+        const storedKey =
+          localStorage.getItem("famesa_admin_key") ||
+          localStorage.getItem("kt_admin_key");
+        if (storedKey) {
+          const res = await fetch("/api/auth/verify-key", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ apiKey: storedKey }),
+            cache: "no-store",
+          });
+          const payload = await res.json().catch(() => null);
+          if (res.ok && payload?.ok && payload.token) {
+            sessionStorage.setItem(SESSION_TOKEN_KEY, payload.token);
+            localStorage.setItem(SESSION_TOKEN_KEY, payload.token);
+            if (!isCancelled) {
+              setAuth("unlocked");
+              void f.loadCloud();
+            }
+            return;
+          }
+        }
+      } catch {
+        /* error leyendo almacenamiento */
+      }
+
+      if (!isCancelled) {
+        setAuth("locked");
+      }
     }
-    setAuth(token ? "unlocked" : "locked");
-  }, []);
+
+    void checkAuth();
+    return () => {
+      isCancelled = true;
+    };
+  }, [f]);
 
   const handleLock = useCallback(async () => {
     try {
@@ -45,6 +87,17 @@ function AdminGate({ children }: { children: ReactNode }) {
     }
     try {
       sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      localStorage.removeItem("famesa_admin_key");
+      localStorage.removeItem("famesa_admin_user");
+      localStorage.removeItem("kt_admin_key");
+      localStorage.removeItem("kt_admin_user");
+      localStorage.removeItem("kt_user");
+      localStorage.removeItem("famesa_user");
+      const g = (window as unknown as { google?: { accounts?: { id?: { disableAutoSelect?: () => void } } } })?.google;
+      if (g?.accounts?.id?.disableAutoSelect) {
+        g.accounts.id.disableAutoSelect();
+      }
     } catch {
       /* ignorar */
     }

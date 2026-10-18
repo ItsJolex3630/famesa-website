@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Barlow_Condensed, Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import Script from "next/script";
 import { CONTACT } from "@/lib/contact-data";
 import { AssistantLauncher } from "@/components/assistant/AssistantLauncher";
 import { FamesaAssistantWidget } from "@/components/assistant/FamesaAssistantWidget";
@@ -122,6 +123,10 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${barlowCondensed.variable} ${inter.variable}`}>
       <body className="min-h-screen bg-white text-famesa-ink antialiased">
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="afterInteractive"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}

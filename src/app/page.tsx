@@ -594,12 +594,136 @@ export default function HomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rfqTrackingId, setRfqTrackingId] = useState("");
 
+  // Google OAuth & Persistent Auth State
+  const [homeUser, setHomeUser] = useState<{
+    email: string;
+    name?: string;
+    picture?: string;
+    isAdmin?: boolean;
+  } | null>(null);
+  const homeGoogleBtnRef = useRef<HTMLDivElement>(null);
+
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   // Generate unique ticket ID on mount
   useEffect(() => {
     setRfqTrackingId(`RFQ-FAMESA-${Math.floor(1000 + Math.random() * 9000)}`);
   }, []);
+
+  // Verificar sesión persistente al cargar la página
+  useEffect(() => {
+    try {
+      const u = JSON.parse(
+        localStorage.getItem("famesa_admin_user") ||
+          localStorage.getItem("kt_admin_user") ||
+          localStorage.getItem("famesa_user") ||
+          localStorage.getItem("kt_user") ||
+          "null",
+      );
+      if (u && u.email) {
+        setHomeUser(u);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const handleHomeGoogleLogin = async (res: { credential?: string }) => {
+    const credential = res?.credential;
+    if (!credential) return;
+    try {
+      const r = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential }),
+      });
+      const data = await r.json().catch(() => null);
+      if (r.ok && data?.ok && data.user) {
+        localStorage.setItem("famesa_user", JSON.stringify(data.user));
+        localStorage.setItem("kt_user", JSON.stringify(data.user));
+        if (data.user.isAdmin) {
+          if (data.token) {
+            sessionStorage.setItem("famesa_admin_token", data.token);
+            localStorage.setItem("famesa_admin_token", data.token);
+          }
+          if (data.user.adminKey) {
+            localStorage.setItem("famesa_admin_key", data.user.adminKey);
+            localStorage.setItem("kt_admin_key", data.user.adminKey);
+          }
+          localStorage.setItem("famesa_admin_user", JSON.stringify(data.user));
+          localStorage.setItem("kt_admin_user", JSON.stringify(data.user));
+        }
+        setHomeUser(data.user);
+        toast.success(`Sesión iniciada: ${data.user.name || data.user.email}`);
+      } else {
+        toast.error(data?.error || "Error al iniciar sesión con Google");
+      }
+    } catch (err) {
+      console.error("Error al conectar con Google OAuth:", err);
+      toast.error("No se pudo conectar con el servidor.");
+    }
+  };
+
+  const logoutHomeUser = () => {
+    localStorage.removeItem("famesa_user");
+    localStorage.removeItem("kt_user");
+    localStorage.removeItem("famesa_admin_key");
+    localStorage.removeItem("kt_admin_key");
+    localStorage.removeItem("famesa_admin_user");
+    localStorage.removeItem("kt_admin_user");
+    localStorage.removeItem("famesa_admin_token");
+    sessionStorage.removeItem("famesa_admin_token");
+    const g = (window as unknown as {
+      google?: { accounts?: { id?: { disableAutoSelect?: () => void } } };
+    })?.google;
+    if (g?.accounts?.id?.disableAutoSelect) {
+      g.accounts.id.disableAutoSelect();
+    }
+    setHomeUser(null);
+    toast.info("Sesión cerrada.");
+  };
+
+  // Inicializar botón de Google con selección automática
+  useEffect(() => {
+    if (homeUser) return;
+    let timer: NodeJS.Timeout;
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+
+    const initBtn = () => {
+      const g = (window as unknown as {
+        google?: {
+          accounts?: {
+            id?: {
+              initialize: (opts: Record<string, unknown>) => void;
+              renderButton: (el: HTMLElement, opts: Record<string, unknown>) => void;
+            };
+          };
+        };
+      })?.google;
+
+      if (g?.accounts?.id && homeGoogleBtnRef.current) {
+        g.accounts.id.initialize({
+          client_id: clientId || "famesa-oauth.apps.googleusercontent.com",
+          callback: handleHomeGoogleLogin,
+          auto_select: true,
+        });
+        homeGoogleBtnRef.current.innerHTML = "";
+        g.accounts.id.renderButton(homeGoogleBtnRef.current, {
+          type: "standard",
+          shape: "pill",
+          theme: "outline",
+          size: "medium",
+          text: "signin_with",
+          locale: "es",
+        });
+      } else {
+        timer = setTimeout(initBtn, 400);
+      }
+    };
+
+    initBtn();
+    return () => clearTimeout(timer);
+  }, [homeUser]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -1007,14 +1131,115 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
             </a>
           </div>
 
-          <a
-            className="btn nb"
-            href="https://wa.me/584143410187?text=Hola%20Famesa%2C%20quiero%20una%20cotizaci%C3%B3n"
-            style={{ padding: "10px 18px", display: "inline-flex", alignItems: "center", gap: "6px" }}
-          >
-            <MessageCircle size={16} />
-            Cotizar por WhatsApp
-          </a>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "nowrap" }}>
+            {/* Si es administrador, enlace visible directo al panel admin */}
+            {homeUser?.isAdmin ? (
+              <Link
+                href="/admin"
+                className="btn-admin"
+                style={{
+                  background: "var(--or, #FF8A1F)",
+                  color: "var(--nv, #0A1A3A)",
+                  fontWeight: 800,
+                  fontSize: "12px",
+                  padding: "8px 14px",
+                  borderRadius: "20px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(255,138,31,0.25)",
+                  letterSpacing: ".04em",
+                  textTransform: "uppercase",
+                }}
+                title="Acceder al Panel de Administración FAMESA SUITE"
+              >
+                ⚙️ Panel Admin
+              </Link>
+            ) : null}
+
+            {/* Menú de usuario autenticado o botón Google */}
+            {homeUser ? (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: "rgba(255,255,255,0.92)",
+                  border: "1px solid var(--sd, #C8D2E0)",
+                  borderRadius: "24px",
+                  padding: "4px 10px 4px 5px",
+                  backdropFilter: "blur(6px)",
+                }}
+              >
+                {homeUser.picture ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={homeUser.picture}
+                    alt={homeUser.name || "Usuario"}
+                    style={{ width: "26px", height: "26px", borderRadius: "50%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "26px",
+                      height: "26px",
+                      borderRadius: "50%",
+                      background: "var(--nv, #0A1A3A)",
+                      color: "#fff",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      display: "grid",
+                      placeItems: "center",
+                    }}
+                  >
+                    {(homeUser.name || homeUser.email || "U")[0].toUpperCase()}
+                  </div>
+                )}
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    maxWidth: "95px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    color: "var(--ink, #12203A)",
+                  }}
+                  title={homeUser.name || homeUser.email}
+                >
+                  {homeUser.name || homeUser.email.split("@")[0]}
+                </span>
+                <button
+                  type="button"
+                  onClick={logoutHomeUser}
+                  title="Cerrar sesión"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "10px",
+                    color: "#dc2626",
+                    padding: "2px 4px",
+                    fontWeight: 700,
+                  }}
+                >
+                  Salir
+                </button>
+              </div>
+            ) : (
+              <div ref={homeGoogleBtnRef} id="g_home_signin" style={{ minHeight: "36px" }} />
+            )}
+
+            <a
+              className="btn nb"
+              href="https://wa.me/584143410187?text=Hola%20Famesa%2C%20quiero%20una%20cotizaci%C3%B3n"
+              style={{ padding: "10px 18px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              <MessageCircle size={16} />
+              Cotizar por WhatsApp
+            </a>
+          </div>
         </div>
       </nav>
       </header>

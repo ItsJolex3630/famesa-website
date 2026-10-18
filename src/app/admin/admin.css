@@ -62,3 +62,90 @@ section.settings-section{background:var(--surface)}
 .lock-panel-btn:hover{background:var(--orange-tint)!important;color:var(--orange)!important}
 .lock-panel-btn svg{color:var(--orange)}
 @media(max-width:1200px){.lock-panel-label{display:none}}
+
+/* ==========================================================================
+   FASE 5: OPTIMIZACIÓN MÓVIL DEL PANEL ADMIN (BOTTOM SHEETS + CARDS)
+   ========================================================================== */
+
+/* 5.1 Modales estilo "Bottom Sheet" en Móviles */
+@media (max-width: 768px) {
+  .modal-backdrop {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .modal,
+  .modal.wide {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 85vh !important;
+    animation: slideUpModal 250ms ease-out !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  .modal-header {
+    border-radius: 20px 20px 0 0 !important;
+  }
+  .modal-body {
+    overflow-y: auto !important;
+    padding: 16px !important;
+  }
+  .modal-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: var(--surface) !important;
+    padding: 12px 16px !important;
+    display: flex !important;
+    gap: 8px !important;
+    border-top: 1px solid var(--silver-dark) !important;
+    z-index: 10 !important;
+  }
+}
+
+@keyframes slideUpModal {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* 5.2 Tablas convertidas a Tarjetas en Móviles */
+@media (max-width: 768px) {
+  /* Ocultar el encabezado de la tabla */
+  .table-wrap table thead {
+    display: none !important;
+  }
+  /* Convertir cada fila en una tarjeta independiente */
+  .table-wrap table,
+  .table-wrap table tbody,
+  .table-wrap table tr {
+    display: block !important;
+    width: 100% !important;
+  }
+  .table-wrap table tr {
+    background: var(--surface) !important;
+    border: 1px solid var(--silver-dark) !important;
+    border-radius: 12px !important;
+    padding: 14px 16px !important;
+    margin-bottom: 12px !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04) !important;
+  }
+  .table-wrap table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 7px 0 !important;
+    border: none !important;
+    font-size: 0.9rem !important;
+    min-height: 30px !important;
+    border-bottom: 1px dashed rgba(200, 210, 224, 0.4) !important;
+  }
+  /* Botones de acción fáciles de tocar */
+  .table-wrap table td:last-child {
+    margin-top: 8px !important;
+    padding-top: 10px !important;
+    border-top: 1px solid var(--silver) !important;
+    border-bottom: none !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+  }
+}

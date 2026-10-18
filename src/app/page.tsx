@@ -379,8 +379,8 @@ const tallerPhotos = [
     caption:
       "Maestros torneros, fresadores y ajustadores del equipo técnico de Famesa C.A. en la nave central del taller, Santa Rosa, Valencia.",
     aspect: "landscape",
-    width: 1900,
-    height: 1425,
+    width: 1024,
+    height: 768,
   },
   {
     id: "fresado-correa",
@@ -2206,14 +2206,24 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
               </button>
 
               <button
-                className="btn"
+                className="btn d"
                 type="button"
                 onClick={() => submitRFQ("email")}
                 disabled={isSubmitting}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "12px 14px", fontSize: "14px", background: "var(--navy)", border: "1px solid rgba(255,255,255,0.25)" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "12px 14px",
+                  fontSize: "14px",
+                  background: "var(--navy)",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                }}
               >
                 <Mail size={17} style={{ color: "var(--or)" }} />
-                {isSubmitting ? "Procesando…" : "Enviar por Gmail"}
+                <span style={{ color: "#ffffff" }}>{isSubmitting ? "Procesando…" : "Enviar por Gmail"}</span>
               </button>
             </div>
           </form>

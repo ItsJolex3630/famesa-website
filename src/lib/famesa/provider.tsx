@@ -2,7 +2,16 @@
 
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { makeSeed, makeEmptyStore, invoiceTotals, type DataStore, type ModuleKey, type RecordData, type Role, canAccess } from './data';
+import {
+  makeSeed,
+  makeEmptyStore,
+  invoiceTotals,
+  type DataStore,
+  type ModuleKey,
+  type RecordData,
+  type Role,
+  canAccess,
+} from './data';
 
 export type AuditEntry = { time: string; action: string; role: Role };
 
@@ -18,7 +27,18 @@ const DEFAULT_RATES: RatesState = { bcv_usd: 880.12, bcv_eur: 985.73, usdt: 1004
 const RATE_TYPE_STORAGE_KEY = 'famesa_active_rate_type';
 const RATES_POLLING_MS = 15 * 60 * 1000;
 
-const isRateType = (v: unknown): v is RateType => v === 'bcv_usd' || v === 'bcv_eur' || v === 'usdt';
+const isRateType = (v: unknown): v is RateType =>
+  v === 'bcv_usd' || v === 'bcv_eur' || v === 'usdt';
+
+export function nextSeqId(prefix: string, rows: RecordData[], pad = 5): string {
+  const re = new RegExp(`^${prefix}-(\\d+)$`);
+  const max = rows.reduce((m, r) => {
+    const match = String(r.id).match(re);
+    const n = match ? Number(match[1]) : 0;
+    return Number.isFinite(n) && n > m ? n : m;
+  }, rows.length);
+  return `${prefix}-${String(max + 1).padStart(pad, '0')}`;
+}
 
 type ContextType = {
   data: DataStore;
@@ -45,7 +65,7 @@ type ContextType = {
   invoiceOrder: (id: string) => void;
   moveStock: (id: string, qty: number, type: string, reference: string) => void;
   receive: (id: string, qty: number) => void;
-  payment: (id: string, amount: number, method: string) => void;
+  payment: (id: string, amount: number, method: string, reference?: string) => void;
   saveCloud: () => Promise<void>;
   loadCloud: () => Promise<void>;
   clearSession: () => void;
@@ -78,10 +98,28 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role>('admin');
   const [period, setPeriodState] = useState('Octubre 2026');
   const [audits, setAudits] = useState<AuditEntry[]>([
-    { time: '12/10/2026, 08:00:00', action: 'Tasas iniciales sincronizadas: BCV $ 880.12 · BCV € 985.73 · USDT ₮ 1004.65 (Turso DB famesa)', role: 'admin' },
+    {
+      time: '12/10/2026, 08:00:00',
+      action:
+        'Tasas iniciales sincronizadas: BCV $ 880.12 · BCV € 985.73 · USDT ₮ 1004.65 (Turso DB famesa)',
+      role: 'admin',
+    },
   ]);
   const [userEmail, setUserEmail] = useState('famesa2005@gmail.com');
   const [cloudBusy, setCloudBusy] = useState(false);
+
+  /** Cabeceras JSON + Bearer de sesión para las llamadas a /api/admin/*. */
+  const adminHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    try {
+      const token =
+        typeof window !== 'undefined' ? sessionStorage.getItem('famesa_admin_token') : null;
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch {
+      /* sessionStorage no disponible */
+    }
+    return headers;
+  };
 
   /**
    * Hidrata el estado desde el endpoint autenticado de Turso (/api/admin/bootstrap).
@@ -90,9 +128,11 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
    */
   const syncFromServer = async (): Promise<boolean> => {
     try {
-      const token = typeof window !== 'undefined' ? sessionStorage.getItem('famesa_admin_token') : null;
+      const token =
+        typeof window !== 'undefined' ? sessionStorage.getItem('famesa_admin_token') : null;
       const res = await fetch('/api/admin/bootstrap', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'same-origin',
         cache: 'no-store',
       });
       if (!res.ok) return false;
@@ -100,34 +140,101 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
         ok?: boolean;
         rate?: number;
         userEmail?: string;
+        audits?: AuditEntry[];
         data?: Partial<DataStore>;
       };
       if (!payload?.ok || !payload.data) return false;
       setData((prev) => ({ ...prev, ...payload.data }));
-      if (payload.rate) setRateState(payload.rate);
       if (payload.userEmail) setUserEmail(payload.userEmail);
+      if (Array.isArray(payload.audits) && payload.audits.length > 0) {
+        setAudits(payload.audits);
+      }
       return true;
     } catch {
-      // Fallback silencioso a datos seed en local / preview.
       return false;
     }
   };
 
   useEffect(() => {
-    void syncFromServer();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /** Cabeceras JSON + Bearer de sesión para las llamadas a /api/admin/*. */
-  const adminHeaders = (): Record<string, string> => {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     try {
-      const token = typeof window !== 'undefined' ? sessionStorage.getItem('famesa_admin_token') : null;
-      if (token) headers.Authorization = `Bearer ${token}`;
+      const token =
+        typeof window !== 'undefined' ? sessionStorage.getItem('famesa_admin_token') : null;
+      if (token) {
+        void syncFromServer();
+      }
     } catch {
       /* sessionStorage no disponible */
     }
-    return headers;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const persistAdd = async (module: ModuleKey, record: RecordData): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/admin/${module}`, {
+        method: 'POST',
+        headers: adminHeaders(),
+        credentials: 'same-origin',
+        body: JSON.stringify(record),
+      });
+      const payload = (await res.json().catch(() => null)) as
+        | { ok?: boolean; id?: string; error?: string }
+        | null;
+      if (!res.ok || !payload?.ok) {
+        toast.error(payload?.error || `No se pudo guardar en Turso (${res.status})`);
+        return false;
+      }
+      return true;
+    } catch {
+      toast.error('Error de red al guardar en la base de datos');
+      return false;
+    }
+  };
+
+  const persistUpdate = async (
+    module: ModuleKey,
+    id: string,
+    patch: Partial<RecordData>,
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/admin/${module}/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: adminHeaders(),
+        credentials: 'same-origin',
+        body: JSON.stringify(patch),
+      });
+      const payload = (await res.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+      if (!res.ok || !payload?.ok) {
+        toast.error(payload?.error || `No se pudo actualizar en Turso (${res.status})`);
+        return false;
+      }
+      return true;
+    } catch {
+      toast.error('Error de red al actualizar en la base de datos');
+      return false;
+    }
+  };
+
+  const persistDelete = async (module: ModuleKey, id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/admin/${module}/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: adminHeaders(),
+        credentials: 'same-origin',
+      });
+      const payload = (await res.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+      if (!res.ok || !payload?.ok) {
+        toast.error(payload?.error || `No se pudo eliminar en Turso (${res.status})`);
+        return false;
+      }
+      return true;
+    } catch {
+      toast.error('Error de red al eliminar en la base de datos');
+      return false;
+    }
   };
 
   const audit = (action: string) =>
@@ -149,9 +256,10 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     setRateState(n);
     audit(`Tasa actualizada a ${n} Bs./USD`);
     toast.success('Tasa actualizada · Documentos emitidos conservan su tasa');
-    void fetch('/api/admin/settings/rate', {
+    void fetch('/api/admin/exchange-rate', {
       method: 'PUT',
       headers: adminHeaders(),
+      credentials: 'same-origin',
       body: JSON.stringify({ rate_usd_ves: n }),
     }).catch(() => {});
   };
@@ -206,14 +314,16 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
 
   const add = (module: ModuleKey, r: RecordData) => {
     if (!guard(module)) return;
-    setData((prev) => ({ ...prev, [module]: [r, ...prev[module]] }));
+    setData((prev) => ({
+      ...prev,
+      [module]:
+        module === 'ajustes'
+          ? [r, ...prev.ajustes.filter((x) => x.id !== r.id)]
+          : [r, ...prev[module]],
+    }));
     audit(`Creación ${r.id}`);
-    toast.success(`${r.id} registrado correctamente`);
-    void fetch(`/api/admin/${module}`, {
-      method: 'POST',
-      headers: adminHeaders(),
-      body: JSON.stringify(r),
-    }).catch(() => {});
+    toast.success(`${r.id} registrado y sincronizado en Turso`);
+    void persistAdd(module, r);
   };
 
   const update = (module: ModuleKey, id: string, patch: Partial<RecordData>) => {
@@ -223,12 +333,8 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       [module]: prev[module].map((r) => (r.id === id ? { ...r, ...patch } : r)),
     }));
     audit(`Actualización ${id}`);
-    toast.success(`${id} actualizado`);
-    void fetch(`/api/admin/${module}/${encodeURIComponent(id)}`, {
-      method: 'PUT',
-      headers: adminHeaders(),
-      body: JSON.stringify(patch),
-    }).catch(() => {});
+    toast.success(`${id} actualizado en Turso`);
+    void persistUpdate(module, id, patch);
   };
 
   const deleteRecord = (module: ModuleKey, id: string) => {
@@ -239,10 +345,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     }));
     audit(`Eliminación de ${id} en ${module}`);
     toast.success(`Registro ${id} eliminado correctamente`);
-    void fetch(`/api/admin/${module}/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: adminHeaders(),
-    }).catch(() => {});
+    void persistDelete(module, id);
   };
 
   const convertLead = (id: string) => {
@@ -252,41 +355,58 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       toast.error('Este prospecto ya fue convertido');
       return;
     }
-    const quoteId = `COT-${String(1 + data.cotizaciones.length).padStart(5, '0')}`;
+    const quoteId = nextSeqId('COT', data.cotizaciones, 5);
+    const clientExists = data.clientes.some((c) => c.name === lead.client);
+    const newClient: RecordData | null = clientExists
+      ? null
+      : {
+          id: nextSeqId('CLI', data.clientes, 5),
+          name: lead.client ?? 'Nuevo Cliente Industrial',
+          status: 'activo',
+          rif: lead.rif || 'Por completar',
+          phone: lead.phone || '',
+          credit: 0,
+          days: 30,
+          sector: 'Industrial',
+          segment: 'Industrial',
+          address: 'Por completar',
+          contact: lead.name || 'Por completar',
+        };
+    const defaultMat = data.inventario[0]?.id ?? 'MAT-1045-50';
+    const newQuote: RecordData = {
+      id: quoteId,
+      client: lead.client,
+      description: lead.description,
+      status: 'borrador',
+      amount: lead.amount ?? 0,
+      cost: Number(lead.amount ?? 0) * 0.65,
+      exchange_rate: rate,
+      amount_ves: Number(lead.amount ?? 0) * rate,
+      material: defaultMat,
+      quantity: 1,
+      machineHours: 12,
+      laborHours: 14,
+      machine: data.taller[0]?.id ?? 'CNC-01',
+      operator: data.personal[0]?.name ?? 'T.S.U. Carlos Méndez',
+      date: new Date().toISOString().slice(0, 10),
+    };
+
     setData((prev) => ({
       ...prev,
-      leads: prev.leads.map((r) => (r.id === id ? { ...r, status: 'cotizado', quote: quoteId } : r)),
-      clientes: prev.clientes.some((c) => c.name === lead.client)
-        ? prev.clientes
-        : [
-            {
-              id: `CLI-${String(prev.clientes.length + 1).padStart(5, '0')}`,
-              name: lead.client ?? 'Nuevo Cliente Industrial',
-              status: 'activo',
-              rif: 'Por completar',
-              phone: '',
-              credit: 0,
-            },
-            ...prev.clientes,
-          ],
-      cotizaciones: [
-        {
-          id: quoteId,
-          client: lead.client,
-          description: lead.description,
-          status: 'borrador',
-          amount: lead.amount ?? 0,
-          cost: Number(lead.amount ?? 0) * 0.65,
-          exchange_rate: rate,
-          amount_ves: Number(lead.amount ?? 0) * rate,
-          material: 'MAT-003',
-          quantity: 1,
-        },
-        ...prev.cotizaciones,
-      ],
+      leads: prev.leads.map((r) =>
+        r.id === id ? { ...r, status: 'cotizado', quote: quoteId } : r,
+      ),
+      clientes: newClient ? [newClient, ...prev.clientes] : prev.clientes,
+      cotizaciones: [newQuote, ...prev.cotizaciones],
     }));
     audit(`${id} convertido a ${quoteId}`);
-    toast.success(`Cliente vinculado y cotización ${quoteId} creada`);
+    toast.success(`Cliente vinculado y cotización ${quoteId} creada en Turso`);
+
+    void (async () => {
+      if (newClient) await persistAdd('clientes', newClient);
+      await persistAdd('cotizaciones', newQuote);
+      await persistUpdate('leads', id, { status: 'cotizado', quote: quoteId });
+    })();
   };
 
   const approveQuote = (id: string) => {
@@ -302,29 +422,31 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       toast.error('Stock insuficiente para reservar material');
       return;
     }
-    const otId = `OT-${String(1 + data.ordenes.length).padStart(5, '0')}`;
+    const otId = nextSeqId('OT', data.ordenes, 5);
+    const newOrder: RecordData = {
+      ...quote,
+      id: otId,
+      quote: id,
+      status: 'pendiente',
+      priority: 'Estándar',
+      progress: 0,
+      machine: quote.machine ?? data.taller[0]?.id ?? 'CNC-01',
+      operator: quote.operator ?? data.personal[0]?.name ?? 'T.S.U. Carlos Méndez',
+      due: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+      hours: 0,
+      estimated: quote.cost,
+      cost: 0,
+      materialQty: qty,
+      reserved: true,
+      quality: '',
+    };
+
     setData((prev) => ({
       ...prev,
-      cotizaciones: prev.cotizaciones.map((r) => (r.id === id ? { ...r, status: 'aprobada', ot: otId } : r)),
-      ordenes: [
-        {
-          ...quote,
-          id: otId,
-          quote: id,
-          status: 'pendiente',
-          priority: 'Estándar',
-          progress: 0,
-          machine: 'CNC-01',
-          operator: 'Carlos Méndez',
-          due: '2026-10-28',
-          hours: 0,
-          estimated: quote.cost,
-          materialQty: qty,
-          reserved: true,
-          quality: '',
-        },
-        ...prev.ordenes,
-      ],
+      cotizaciones: prev.cotizaciones.map((r) =>
+        r.id === id ? { ...r, status: 'aprobada', ot: otId } : r,
+      ),
+      ordenes: [newOrder, ...prev.ordenes],
       inventario: prev.inventario.map((r) =>
         r.id === quote.material
           ? {
@@ -337,7 +459,20 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       ),
     }));
     audit(`${id} aprobada → ${otId}; material reservado y descontado`);
-    toast.success(`${otId} creada · Material reservado`);
+    toast.success(`${otId} creada · Material reservado en Turso`);
+
+    void (async () => {
+      await persistUpdate('cotizaciones', id, { status: 'aprobada', ot: otId });
+      await persistAdd('ordenes', newOrder);
+      if (material) {
+        const nextStock = Number(material.stock) - qty;
+        await persistUpdate('inventario', material.id, {
+          stock: nextStock,
+          kardex: `${material.kardex ?? ''}\nSalida a OT · ${otId} · ${qty} ${material.unit}`,
+          status: nextStock < Number(material.min) ? 'crítico' : 'disponible',
+        });
+      }
+    })();
   };
 
   const invoiceOrder = (id: string) => {
@@ -351,32 +486,40 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       toast.error('Complete la OT y firme el control de calidad antes de facturar');
       return;
     }
-    const invoiceId = `FAC-${String(1 + data.facturacion.length).padStart(5, '0')}`;
+    const invoiceId = nextSeqId('FAC', data.facturacion, 5);
     const totals = invoiceTotals(Number(order.amount), rate);
     const client = data.clientes.find((c) => c.name === order.client);
+    const today = new Date().toISOString().slice(0, 10);
+    const due = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    const newInvoice: RecordData = {
+      ...order,
+      ...totals,
+      id: invoiceId,
+      amount: totals.total,
+      status: 'pendiente',
+      paid: 0,
+      control: `00-${String(1000 + data.facturacion.length + 1).padStart(6, '0')}`,
+      ot: id,
+      rif: client?.rif || 'J-00000000-0',
+      address: client?.address || 'Valencia, Edo. Carabobo',
+      date: today,
+      due,
+    };
+
     setData((prev) => ({
       ...prev,
-      ordenes: prev.ordenes.map((r) => (r.id === id ? { ...r, status: 'facturada', invoice: invoiceId } : r)),
-      facturacion: [
-        {
-          ...order,
-          ...totals,
-          id: invoiceId,
-          amount: totals.total,
-          status: 'pendiente',
-          paid: 0,
-          control: `00-${String(1 + prev.facturacion.length).padStart(6, '0')}`,
-          ot: id,
-          rif: client?.rif,
-          address: client?.address,
-          date: '2026-10-12',
-          due: '2026-11-11',
-        },
-        ...prev.facturacion,
-      ],
+      ordenes: prev.ordenes.map((r) =>
+        r.id === id ? { ...r, status: 'facturada', invoice: invoiceId } : r,
+      ),
+      facturacion: [newInvoice, ...prev.facturacion],
     }));
     audit(`${id} → factura ${invoiceId}; tasa congelada ${rate}`);
-    toast.success(`${invoiceId} emitida con IVA 16%`);
+    toast.success(`${invoiceId} emitida con IVA 16% en Turso`);
+
+    void (async () => {
+      await persistAdd('facturacion', newInvoice);
+      await persistUpdate('ordenes', id, { status: 'facturada', invoice: invoiceId });
+    })();
   };
 
   const moveStock = (id: string, qty: number, type: string, reference: string) => {
@@ -394,7 +537,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     update('inventario', id, {
       stock: Number(material.stock) + delta,
       status: Number(material.stock) + delta < Number(material.min) ? 'crítico' : 'disponible',
-      kardex: `${material.kardex ?? ''}\n${type} · ${new Date().toLocaleDateString('es-VE')} · ${delta} ${material.unit} · ${reference}`,
+      kardex: `${material.kardex ?? ''}\n${type} · ${new Date().toLocaleDateString('es-VE')} · ${delta > 0 ? `+${delta}` : delta} ${material.unit} · ${reference}`,
     });
   };
 
@@ -405,14 +548,18 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       toast.error('Cantidad excede el saldo pendiente');
       return;
     }
+    const nextReceived = Number(po.received) + qty;
+    const nextPoStatus = nextReceived >= Number(po.quantity) ? 'recibida' : 'parcial';
+    const mat = data.inventario.find((r) => r.id === po.material);
+
     setData((prev) => ({
       ...prev,
       compras: prev.compras.map((r) =>
         r.id === id
           ? {
               ...r,
-              received: Number(r.received) + qty,
-              status: Number(r.received) + qty === Number(r.quantity) ? 'recibida' : 'parcial',
+              received: nextReceived,
+              status: nextPoStatus,
             }
           : r,
       ),
@@ -428,10 +575,22 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
       ),
     }));
     audit(`Recepción ${id}: ${qty} unidades`);
-    toast.success('Recepción registrada e inventario actualizado');
+    toast.success('Recepción registrada e inventario actualizado en Turso');
+
+    void (async () => {
+      await persistUpdate('compras', id, { received: nextReceived, status: nextPoStatus });
+      if (mat) {
+        const nextStock = Number(mat.stock) + qty;
+        await persistUpdate('inventario', mat.id, {
+          stock: nextStock,
+          status: nextStock < Number(mat.min) ? 'crítico' : 'disponible',
+          kardex: `${mat.kardex ?? ''}\nRecepción ${id} · +${qty} ${mat.unit}`,
+        });
+      }
+    })();
   };
 
-  const payment = (id: string, amount: number, method: string) => {
+  const payment = (id: string, amount: number, method: string, reference?: string) => {
     if (!guard('cobros')) return;
     const invoice = data.facturacion.find((r) => r.id === id);
     if (!invoice || amount <= 0 || amount > Number(invoice.amount) - Number(invoice.paid)) {
@@ -440,42 +599,56 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     }
     const foreign = method === 'Zelle USD' || method === 'Efectivo USD';
     const igtf = foreign ? amount * 0.03 : 0;
+    const payId = nextSeqId('PAG', data.cobros, 4);
+    const newPaid = Number(invoice.paid) + amount;
+    const newStatus = newPaid >= Number(invoice.amount) ? 'pagada' : invoice.status;
+    const newIgtf = Number(invoice.igtf_collected ?? 0) + igtf;
+    const newPayment: RecordData = {
+      id: payId,
+      client: invoice.client,
+      invoice: id,
+      amount,
+      igtf,
+      method,
+      reference: reference || payId,
+      status: 'conciliado',
+      exchange_rate: rate,
+      amount_ves: amount * rate,
+      date: new Date().toISOString().slice(0, 10),
+    };
+
     setData((prev) => ({
       ...prev,
       facturacion: prev.facturacion.map((r) =>
         r.id === id
           ? {
               ...r,
-              paid: Number(r.paid) + amount,
-              status: Number(r.paid) + amount >= Number(r.amount) ? 'pagada' : r.status,
-              igtf_collected: Number(r.igtf_collected ?? 0) + igtf,
+              paid: newPaid,
+              status: newStatus,
+              igtf_collected: newIgtf,
             }
           : r,
       ),
-      cobros: [
-        {
-          id: `PAG-${String(prev.cobros.length + 1).padStart(4, '0')}`,
-          client: invoice.client,
-          invoice: id,
-          amount,
-          igtf,
-          method,
-          status: 'conciliado',
-          exchange_rate: rate,
-          amount_ves: amount * rate,
-          date: new Date().toISOString().slice(0, 10),
-        },
-        ...prev.cobros,
-      ],
+      cobros: [newPayment, ...prev.cobros],
     }));
     audit(`Pago ${id}: ${amount} USD / ${method}; IGTF ${igtf}`);
-    toast.success(`Pago registrado${foreign ? ' · IGTF 3% registrado en comprobante' : ''}`);
+    toast.success(
+      `Pago registrado en Turso${foreign ? ' · IGTF 3% registrado en comprobante' : ''}`,
+    );
+
+    void (async () => {
+      await persistAdd('cobros', newPayment);
+    })();
   };
 
   const saveCloud = async () => {
     setCloudBusy(true);
     try {
-      localStorage.setItem('famesa_suite_snapshot', JSON.stringify({ data, rate, mirror, audits }));
+      localStorage.setItem(
+        'famesa_suite_snapshot',
+        JSON.stringify({ data, rate, mirror, audits }),
+      );
+      await syncFromServer();
       audit('Instantánea sincronizada con el servidor');
       toast.success('Estado sincronizado con Turso / Almacenamiento local');
     } catch {
@@ -500,7 +673,12 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
         toast.info('No hay instantánea previa; mostrando base activa');
         return;
       }
-      const saved = JSON.parse(raw) as { data: DataStore; rate: number; mirror: boolean; audits: AuditEntry[] };
+      const saved = JSON.parse(raw) as {
+        data: DataStore;
+        rate: number;
+        mirror: boolean;
+        audits: AuditEntry[];
+      };
       if (saved.data?.inventario) {
         setData(saved.data);
         setRateState(saved.rate);
@@ -600,7 +778,10 @@ export function exportCSV(rows: RecordData[], name: string) {
   };
   const csv =
     '\uFEFF' +
-    [keys.map(escape).join(';'), ...rows.map((r) => keys.map((k) => escape(r[k])).join(';'))].join('\r\n');
+    [
+      keys.map(escape).join(';'),
+      ...rows.map((r) => keys.map((k) => escape(r[k])).join(';')),
+    ].join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
   const a = document.createElement('a');
   a.href = url;

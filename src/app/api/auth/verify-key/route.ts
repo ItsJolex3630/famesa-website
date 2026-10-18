@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
     // 3. Éxito: reinicia el contador y emite la sesión firmada.
     resetRateLimit(ip);
-    const user = { email: "admin@famesa.com.ve", role: "admin", name: "Administrador FAMESA" };
+    const user = { email: "famesa2005@gmail.com", role: "admin", name: "Administrador FAMESA" };
     const token = await signSession(user);
     await logAudit("auth", "admin", "login", "Desbloqueo exitoso del panel (clave API)", user.email);
 

@@ -18,7 +18,7 @@ let client: Client | null = null;
 
 export function getDb(): Client {
   if (!client) {
-    const url = process.env.TURSO_URL;
+    const url = process.env.TURSO_URL || process.env.TURSO_DATABASE_URL;
     const authToken = process.env.TURSO_AUTH_TOKEN;
     if (!url || !authToken) {
       throw new HttpError(500, "Base de datos no configurada en el servidor");
@@ -29,7 +29,7 @@ export function getDb(): Client {
 }
 
 export function isDbConfigured(): boolean {
-  return Boolean(process.env.TURSO_URL && process.env.TURSO_AUTH_TOKEN);
+  return Boolean((process.env.TURSO_URL || process.env.TURSO_DATABASE_URL) && process.env.TURSO_AUTH_TOKEN);
 }
 
 export function json(
@@ -197,9 +197,30 @@ export function bearer(request: Request): string | null {
   return match && match[1] ? match[1].trim() : null;
 }
 
+export function sessionCookie(request: Request): string | null {
+  const raw = request.headers.get("cookie") || "";
+  if (!raw) return null;
+  const parts = raw.split(";");
+  for (const part of parts) {
+    const [k, ...v] = part.trim().split("=");
+    if (k === "famesa_admin_session" && v.length > 0) {
+      return decodeURIComponent(v.join("=").trim());
+    }
+  }
+  return null;
+}
+
 export async function currentUser(request: Request): Promise<SessionUser | null> {
-  const token = bearer(request);
-  return token ? verifySession(token) : null;
+  const token = bearer(request) || sessionCookie(request);
+  if (token) {
+    const verified = await verifySession(token);
+    if (verified) return verified;
+  }
+  const apiKey = request.headers.get("x-api-key")?.trim();
+  if (apiKey && (await verifyAdminApiKey(apiKey))) {
+    return { email: "famesa2005@gmail.com", role: "admin", name: "Administrador FAMESA" };
+  }
+  return null;
 }
 
 export async function requireUser(request: Request): Promise<SessionUser> {
@@ -236,13 +257,15 @@ export async function logAudit(
   entityId: string,
   action: AuditAction,
   details: string,
-  userEmail = "sistema",
+  userEmail = "famesa2005@gmail.com",
 ): Promise<void> {
   try {
     const db = getDb();
+    const dbAction =
+      action === "login_failed" || action === "logout" ? "login" : action;
     await db.execute({
       sql: "INSERT INTO audit_log (user_email, entity, entity_id, action, details) VALUES (?, ?, ?, ?, ?)",
-      args: [userEmail, entity, entityId, action, details],
+      args: [userEmail, entity, entityId, dbAction, details],
     });
   } catch (error) {
     console.error("audit_log error:", error);
@@ -264,5 +287,29 @@ export async function nextSeq(key: string, fallback: number): Promise<number> {
 export async function getRate(): Promise<number> {
   const db = getDb();
   const result = await db.execute("SELECT value FROM settings WHERE key = 'rate_usd_ves'");
-  return num(result.rows[0]?.value, 54.8);
+  return num(result.rows[0]?.value, 880.12);
 }
+
+/** Parsea JSON seguro desde columnas `notes` sin fallar si hay texto plano. */
+export function parseMeta(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "string") return {};
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith("{")) return { _text: trimmed };
+  try {
+    const parsed = JSON.parse(trimmed);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return { _text: trimmed };
+  }
+}
+
+export function serializeMeta(meta: Record<string, unknown>): string {
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (v !== undefined && k !== "_text") clean[k] = v;
+  }
+  return JSON.stringify(clean);
+}
+

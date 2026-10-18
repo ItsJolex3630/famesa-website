@@ -1,61 +1,2684 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Download, Plus, Eye, ArrowUpRight, Factory, AlertTriangle, Printer, Check, Save, ArrowRight, ChevronRight, Send, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+  Search,
+  Download,
+  Plus,
+  Eye,
+  ArrowUpRight,
+  Factory,
+  AlertTriangle,
+  Printer,
+  Check,
+  Save,
+  ArrowRight,
+  ChevronRight,
+  Send,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useFamesa, exportCSV } from '@/lib/famesa/provider';
-import { moduleInfo, usd, ves, quoteTotals, invoiceTotals, canAccess, roles, type RecordData, type ModuleKey } from '@/lib/famesa/data';
+import { useFamesa, exportCSV, nextSeqId } from '@/lib/famesa/provider';
+import {
+  moduleInfo,
+  usd,
+  ves,
+  quoteTotals,
+  invoiceTotals,
+  canAccess,
+  roles,
+  type RecordData,
+  type ModuleKey,
+} from '@/lib/famesa/data';
 import { Modal, Field, Money, Status } from './shared';
 import { CashChart, buildCashflow } from './dashboard';
-export type DialogState={module:ModuleKey;row?:RecordData | undefined;mode:'create'|'detail'|'print'|'payment'|'stock'|'receive'|'work'|'quality'};
-export function ModulePage({module,onDialog}:{module:ModuleKey;onDialog:(s:DialogState)=>void}){const f=useFamesa();const [deleteTarget,setDeleteTarget]=useState<{id:string;name:string}|null>(null);const [search,setSearch]=useState(''),[filter,setFilter]=useState('todos');const info=moduleInfo[module];const rows=module==='cobros'?f.data.facturacion.filter(r=>Number(r.amount)>Number(r.paid)):f.data[module];const filtered=rows.filter(r=>(filter==='todos'||r.status===filter)&&Object.values(r).some(v=>String(v).toLowerCase().includes(search.toLowerCase())));const total=rows.reduce((s,r)=>s+Number(r.amount??0),0);if(!canAccess(f.role,module))return <div className="empty-state"><AlertTriangle size={36} className="mx-auto"/><h2>Acceso restringido</h2><p>El rol {roles[f.role]} no tiene acceso a este módulo.</p></div>;
- const create=()=>onDialog({module,mode:module==='inventario'?'stock':module==='cobros'?'payment':'create'});
- return <><div className="breadcrumb"><span>FAMESA SUITE</span><ChevronRight/><strong>{info.title}</strong></div><div className="page-heading"><div><h1>{info.title}<span className="text-orange">.</span></h1><p>{info.subtitle}</p></div><div className="heading-actions"><Button variant="outline" onClick={()=>exportCSV(module==='ajustes'?f.audits.map((a,i)=>({id:String(i),status:a.role,description:a.action,date:a.time})):module==='reportes'?f.data.ordenes:filtered,module)}><Download/> CSV</Button>{module==='inventario'?<div className="flex gap-2"><Button variant="outline" onClick={()=>onDialog({module,mode:'stock'})}><Plus size={16}/> MOVIMIENTO</Button><Button variant="industrial" onClick={()=>onDialog({module,mode:'create'})}><Plus size={16}/> NUEVO MATERIAL</Button></div>:module==='taller'?<Button variant="industrial" onClick={()=>onDialog({module,mode:'create'})}><Plus size={16}/> NUEVA MÁQUINA</Button>:module!=='reportes'&&module!=='ajustes'?<Button variant="industrial" onClick={create}><Plus/>{info.action}</Button>:null}</div></div>
- {module==='ajustes'?<Settings/>:module==='reportes'?<Reports/>:<>{module==='cobros'&&<Aging/>}<div className="module-stats"><div className="module-stat"><span className="eyebrow muted">{module==='cobros'?'FACTURAS CON SALDO':'REGISTROS TOTALES'}</span><div className="value">{String(rows.length).padStart(2,'0')}</div></div><div className="module-stat"><span className="eyebrow muted">{module==='inventario'?'MATERIALES CRÍTICOS':module==='taller'?'MÁQUINAS DISPONIBLES':'EN SEGUIMIENTO'}</span><div className="value">{module==='taller'?rows.filter(r=>r.status!=='mantenimiento'&&r.status!=='parada').length:rows.filter(r=>['crítico','pendiente','enviada','nuevo','en_proceso','vencida'].includes(r.status)).length}</div></div><div className="module-stat"><span className="eyebrow muted">{module==='inventario'?'VALOR DEL INVENTARIO':module==='personal'?'HORAS REGISTRADAS':'VALOR TOTAL USD'}</span><div className="value">{module==='personal'?rows.reduce((s,r)=>s+Number(r.hours),0)+' h':usd(module==='inventario'?rows.reduce((s,r)=>s+Number(r.stock)*Number(r.cost),0):total)}{f.mirror&&module!=='personal'&&<small>{ves((module==='inventario'?rows.reduce((s,r)=>s+Number(r.stock)*Number(r.cost),0):total)*f.rate)}</small>}</div></div></div>
- <div className="toolbar"><div className="search-field"><Search/><input aria-label="Buscar registros" placeholder="Buscar por código, cliente o descripción..." value={search} onChange={e=>setSearch(e.target.value)}/></div><div className="flex gap-2 items-center"><select className="filter-select" aria-label="Filtrar por estado" value={filter} onChange={e=>setFilter(e.target.value)}><option value="todos">Todos los estados</option>{Array.from(new Set(rows.map(r=>r.status))).map(s=><option key={s} value={s}>{s.replaceAll('_',' ')}</option>)}</select><span className="mono muted">{filtered.length} registros</span></div></div>
- {module==='taller'?<div className="machine-grid">{filtered.map(m=><article className="machine-card" key={m.id}><div className="machine-card-top"><span className="mono text-primary">{m.id}</span><div className="flex items-center gap-1"><Status status={m.status}/><Button variant="ghost" size="icon" className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-7 w-7" title="Eliminar máquina" onClick={()=>setDeleteTarget({id:m.id,name:String(m.name??m.id)})}><Trash2 size={14}/></Button></div></div><div className="machine-illustration"><Factory size={44} strokeWidth={1}/></div><h3>{m.name}</h3><p>{m.standard}</p><div className="machine-card-meta"><span>{m.hours} / {m.capacity} horas</span><span>{m.ot}</span></div><p>Mantenimiento: {m.maintenance}</p><Button variant="outline" className="w-full" onClick={()=>onDialog({module,row:m,mode:'detail'})}>GESTIONAR MÁQUINA <ArrowUpRight/></Button></article>)}</div>:<section className="panel"><div className="table-wrap"><table><thead><tr><th>Código</th><th>{module==='inventario'?'Material / ubicación':module==='clientes'?'Cliente / RIF':module==='personal'?'Operario / especialidad':module==='gastos'?'Categoría / comprobante':module==='compras'?'Proveedor / material':'Cliente / trabajo'}</th><th>{module==='inventario'?'Stock / mínimo':module==='personal'?'Horas / costo hora':module==='clientes'?'Crédito / plazo':module==='compras'?'Recepción':'Valor USD / Bs.'}</th><th>{module==='cotizaciones'||module==='ordenes'?'Margen bruto':'Información'}</th><th>Estado</th><th className="text-right">Acciones</th></tr></thead><tbody>{filtered.map(r=><tr key={r.id}><td><Button variant="link" className="code-link h-auto p-0" onClick={()=>onDialog({module,row:r,mode:'detail'})}>{r.id}</Button></td><td><div className="cell-title">{r.name??r.client}</div><div className="cell-sub">{module==='inventario'?r.location:module==='clientes'?r.rif:module==='gastos'?`${r.description} · ${r.voucher}`:r.description}</div></td><td>{module==='inventario'?<><strong className={r.status==='crítico'?'negative':''}>{r.stock} {r.unit}</strong><div className="cell-sub">Mínimo {r.min} {r.unit} · {usd(Number(r.cost))}/{r.unit}</div></>:module==='clientes'?<><Money amount={Number(r.credit??0)}/><div className="cell-sub">{r.days??30} días de crédito</div></>:module==='personal'?<><strong>{r.hours} h</strong><div className="cell-sub">{usd(Number(r.cost))}/h</div></>:module==='compras'?<><strong>{r.received} / {r.quantity}</strong><div className="cell-sub"><Money amount={Number(r.amount)}/></div></>:<Money amount={module==='cobros'?Number(r.amount)-Number(r.paid):Number(r.amount??0)} rate={module==='facturacion'||module==='cobros'?Number(r.exchange_rate):undefined}/>}</td><td>{module==='cotizaciones'||module==='ordenes'?<span className={Number(r.amount)>0?(1-Number(r.cost)/Number(r.amount))*100>=35?'positive':(1-Number(r.cost)/Number(r.amount))*100>=20?'warning':'negative':'muted'}>{(Number(r.amount)>0?(1-Number(r.cost)/Number(r.amount))*100:0).toFixed(1)}%<div className="cell-sub">{usd(Number(r.amount)-Number(r.cost))}</div></span>:module==='inventario'?<span className="mono">{r.stock&&Number(r.stock)<Number(r.min)?'REPOSICIÓN':'STOCK SALUDABLE'}</span>:module==='clientes'?<span className="cell-sub">{r.sector}<br/>{r.segment}</span>:module==='personal'?<span className="cell-sub">{r.certification}</span>:module==='gastos'?<><span className="cell-sub">Presupuesto: {usd(Number(r.budget))}</span><div className="progress"><div className="progress-fill" style={{width:`${Math.min(100,Number(r.amount)/Number(r.budget)*100)}%`}}/></div><div className="cell-sub">{r.recurring?'Recurrente':'No recurrente'}</div></>:module==='cobros'?<span className="cell-sub">Vence: {r.due}<br/>Tasa emitida: {r.exchange_rate}</span>:module==='facturacion'?<span className="mono">CTRL {r.control}</span>:<span className="cell-sub">{r.priority??r.date}</span>}</td><td><Status status={r.status}/></td><td><div className="table-actions"><Button variant="ghost" size="icon" title="Ver detalle" onClick={()=>onDialog({module,row:r,mode:'detail'})}><Eye/></Button>{module==='cobros'?<Button variant="outline" size="sm" onClick={()=>onDialog({module,row:r,mode:'payment'})}>PAGAR</Button>:module==='inventario'?<Button variant="ghost" size="icon" title="Registrar movimiento" onClick={()=>onDialog({module,row:r,mode:'stock'})}><Plus/></Button>:<Button variant="ghost" size="icon" title="Gestionar registro" onClick={()=>onDialog({module,row:r,mode:'detail'})}><ArrowUpRight/></Button>}{['inventario','clientes','personal','gastos','compras'].includes(module)&&<Button variant="ghost" size="icon" className="text-red-500 hover:text-red-400 hover:bg-red-500/10" title="Eliminar registro" onClick={()=>setDeleteTarget({id:r.id,name:String(r.name??r.client??r.description??r.id)})}><Trash2 size={16}/></Button>}</div></td></tr>)}</tbody></table>{!filtered.length&&<div className="empty-state">No hay registros que coincidan con tu búsqueda.</div>}</div><div className="table-footer"><span>{filtered.length} REGISTROS · FAMESA C.A.</span><span>USD BASE {f.mirror?' / Bs. ESPEJO':''}</span></div></section>}</>}
- {deleteTarget&&<Modal title="Confirmar eliminación" subtitle={`Esta acción eliminará el registro ${deleteTarget.id} de manera irreversible.`} onClose={()=>setDeleteTarget(null)} footer={<><Button variant="outline" onClick={()=>setDeleteTarget(null)}>CANCELAR</Button><Button variant="destructive" onClick={()=>{f.deleteRecord(module,deleteTarget.id);setDeleteTarget(null);}}><Trash2 size={16}/> ELIMINAR DEFINITIVAMENTE</Button></>}><div className="p-4 bg-red-950/20 border border-red-500/30 rounded-lg text-sm text-red-200"><p>¿Estás seguro de que deseas eliminar <strong>{deleteTarget.name}</strong> ({deleteTarget.id})?</p><p className="mt-2 text-xs text-muted-foreground">Si el elemento está asociado a órdenes o cotizaciones existentes, verifique antes de proceder.</p></div></Modal>}
- </>;
+
+export type DialogState = {
+  module: ModuleKey;
+  row?: RecordData | undefined;
+  mode: 'create' | 'detail' | 'print' | 'payment' | 'stock' | 'receive' | 'work' | 'quality';
+};
+
+const EXPENSE_CATEGORIES = [
+  'Servicios',
+  'Materia Prima',
+  'Nómina',
+  'Alquiler',
+  'Herramientas e Insertos',
+  'Mantenimiento',
+  'Fletes y Transporte',
+  'Impuestos y Tasas',
+  'Seguros',
+  'Marketing y Comercial',
+  'Otros',
+];
+
+const DEFAULT_SUPPLIERS = [
+  'Sumindu C.A. (Suministros Industriales)',
+  'Ferrum Aceros C.A.',
+  'Inoxtotalven C.A.',
+  'Hierrocor C.A.',
+  'Filotor C.A.',
+  'Suministros JL C.A.',
+  'Industrial Supply Valencia C.A.',
+];
+
+const DELETABLE_MODULES: ModuleKey[] = [
+  'inventario',
+  'taller',
+  'clientes',
+  'personal',
+  'gastos',
+  'compras',
+  'leads',
+  'cotizaciones',
+  'ordenes',
+  'facturacion',
+];
+
+const EDITABLE_MODULES: ModuleKey[] = [
+  'clientes',
+  'gastos',
+  'personal',
+  'cotizaciones',
+  'inventario',
+  'taller',
+  'compras',
+  'ordenes',
+  'leads',
+];
+
+export function ModulePage({
+  module,
+  onDialog,
+}: {
+  module: ModuleKey;
+  onDialog: (s: DialogState) => void;
+}) {
+  const f = useFamesa();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('todos');
+  const info = moduleInfo[module];
+  const rows =
+    module === 'cobros'
+      ? f.data.facturacion.filter((r) => Number(r.amount) > Number(r.paid))
+      : f.data[module];
+  const filtered = rows.filter(
+    (r) =>
+      (filter === 'todos' || r.status === filter) &&
+      Object.values(r).some((v) => String(v).toLowerCase().includes(search.toLowerCase())),
+  );
+  const total = rows.reduce((s, r) => s + Number(r.amount ?? 0), 0);
+
+  if (!canAccess(f.role, module)) {
+    return (
+      <div className="empty-state">
+        <AlertTriangle size={36} className="mx-auto" />
+        <h2>Acceso restringido</h2>
+        <p>El rol {roles[f.role]} no tiene acceso a este módulo.</p>
+      </div>
+    );
+  }
+
+  const create = () =>
+    onDialog({
+      module,
+      mode: module === 'inventario' ? 'stock' : module === 'cobros' ? 'payment' : 'create',
+    });
+
+  return (
+    <>
+      <div className="breadcrumb">
+        <span>FAMESA SUITE</span>
+        <ChevronRight />
+        <strong>{info.title}</strong>
+      </div>
+      <div className="page-heading">
+        <div>
+          <h1>
+            {info.title}
+            <span className="text-orange">.</span>
+          </h1>
+          <p>{info.subtitle}</p>
+        </div>
+        <div className="heading-actions">
+          <Button
+            variant="outline"
+            onClick={() =>
+              exportCSV(
+                module === 'ajustes'
+                  ? f.audits.map((a, i) => ({
+                      id: String(i),
+                      status: a.role,
+                      description: a.action,
+                      date: a.time,
+                    }))
+                  : module === 'reportes'
+                    ? f.data.ordenes
+                    : filtered,
+                module,
+              )
+            }
+          >
+            <Download /> CSV
+          </Button>
+          {module === 'inventario' ? (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onDialog({ module, mode: 'stock' })}>
+                <Plus size={16} /> MOVIMIENTO
+              </Button>
+              <Button variant="industrial" onClick={() => onDialog({ module, mode: 'create' })}>
+                <Plus size={16} /> NUEVO MATERIAL
+              </Button>
+            </div>
+          ) : module === 'taller' ? (
+            <Button variant="industrial" onClick={() => onDialog({ module, mode: 'create' })}>
+              <Plus size={16} /> NUEVA MÁQUINA
+            </Button>
+          ) : module !== 'reportes' && module !== 'ajustes' ? (
+            <Button variant="industrial" onClick={create}>
+              <Plus />
+              {info.action}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      {module === 'ajustes' ? (
+        <Settings />
+      ) : module === 'reportes' ? (
+        <Reports />
+      ) : (
+        <>
+          {module === 'cobros' && <Aging />}
+          <div className="module-stats">
+            <div className="module-stat">
+              <span className="eyebrow muted">
+                {module === 'cobros' ? 'FACTURAS CON SALDO' : 'REGISTROS TOTALES'}
+              </span>
+              <div className="value">{String(rows.length).padStart(2, '0')}</div>
+            </div>
+            <div className="module-stat">
+              <span className="eyebrow muted">
+                {module === 'inventario'
+                  ? 'MATERIALES CRÍTICOS'
+                  : module === 'taller'
+                    ? 'MÁQUINAS DISPONIBLES'
+                    : 'EN SEGUIMIENTO'}
+              </span>
+              <div className="value">
+                {module === 'taller'
+                  ? rows.filter((r) => r.status !== 'mantenimiento' && r.status !== 'parada').length
+                  : rows.filter((r) =>
+                      ['crítico', 'pendiente', 'enviada', 'nuevo', 'en_proceso', 'vencida'].includes(
+                        r.status,
+                      ),
+                    ).length}
+              </div>
+            </div>
+            <div className="module-stat">
+              <span className="eyebrow muted">
+                {module === 'inventario'
+                  ? 'VALOR DEL INVENTARIO'
+                  : module === 'personal'
+                    ? 'HORAS REGISTRADAS'
+                    : 'VALOR TOTAL USD'}
+              </span>
+              <div className="value">
+                {module === 'personal'
+                  ? rows.reduce((s, r) => s + Number(r.hours), 0) + ' h'
+                  : usd(
+                      module === 'inventario'
+                        ? rows.reduce((s, r) => s + Number(r.stock) * Number(r.cost), 0)
+                        : total,
+                    )}
+                {f.mirror && module !== 'personal' && (
+                  <small>
+                    {ves(
+                      (module === 'inventario'
+                        ? rows.reduce((s, r) => s + Number(r.stock) * Number(r.cost), 0)
+                        : total) * f.rate,
+                    )}
+                  </small>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="toolbar">
+            <div className="search-field">
+              <Search />
+              <input
+                aria-label="Buscar registros"
+                placeholder="Buscar por código, cliente o descripción..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 items-center">
+              <select
+                className="filter-select"
+                aria-label="Filtrar por estado"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              >
+                <option value="todos">Todos los estados</option>
+                {Array.from(new Set(rows.map((r) => r.status))).map((s) => (
+                  <option key={s} value={s}>
+                    {s.replaceAll('_', ' ')}
+                  </option>
+                ))}
+              </select>
+              <span className="mono muted">{filtered.length} registros</span>
+            </div>
+          </div>
+
+          {module === 'taller' ? (
+            <div className="machine-grid">
+              {filtered.map((m) => (
+                <article className="machine-card" key={m.id}>
+                  <div className="machine-card-top">
+                    <span className="mono text-primary">{m.id}</span>
+                    <div className="flex items-center gap-1">
+                      <Status status={m.status} />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-7 w-7"
+                        title="Eliminar máquina"
+                        onClick={() =>
+                          setDeleteTarget({ id: m.id, name: String(m.name ?? m.id) })
+                        }
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="machine-illustration">
+                    <Factory size={44} strokeWidth={1} />
+                  </div>
+                  <h3>{m.name}</h3>
+                  <p>{m.standard}</p>
+                  <div className="machine-card-meta">
+                    <span>
+                      {m.hours} / {m.capacity} horas
+                    </span>
+                    <span>{m.ot}</span>
+                  </div>
+                  <p>Mantenimiento: {m.maintenance}</p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => onDialog({ module, row: m, mode: 'detail' })}
+                  >
+                    GESTIONAR MÁQUINA <ArrowUpRight />
+                  </Button>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <section className="panel">
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>
+                        {module === 'inventario'
+                          ? 'Material / ubicación'
+                          : module === 'clientes'
+                            ? 'Cliente / RIF'
+                            : module === 'personal'
+                              ? 'Operario / especialidad'
+                              : module === 'gastos'
+                                ? 'Categoría / comprobante'
+                                : module === 'compras'
+                                  ? 'Proveedor / material'
+                                  : 'Cliente / trabajo'}
+                      </th>
+                      <th>
+                        {module === 'inventario'
+                          ? 'Stock / mínimo'
+                          : module === 'personal'
+                            ? 'Horas / costo hora'
+                            : module === 'clientes'
+                              ? 'Crédito / plazo'
+                              : module === 'compras'
+                                ? 'Recepción'
+                                : 'Valor USD / Bs.'}
+                      </th>
+                      <th>
+                        {module === 'cotizaciones' || module === 'ordenes'
+                          ? 'Margen bruto'
+                          : 'Información'}
+                      </th>
+                      <th>Estado</th>
+                      <th className="text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((r) => (
+                      <tr key={r.id}>
+                        <td>
+                          <Button
+                            variant="link"
+                            className="code-link h-auto p-0"
+                            onClick={() => onDialog({ module, row: r, mode: 'detail' })}
+                          >
+                            {r.id}
+                          </Button>
+                        </td>
+                        <td>
+                          <div className="cell-title">{r.name ?? r.client}</div>
+                          <div className="cell-sub">
+                            {module === 'inventario'
+                              ? r.location
+                              : module === 'clientes'
+                                ? r.rif
+                                : module === 'gastos'
+                                  ? `${r.description} · ${r.voucher}`
+                                  : r.description}
+                          </div>
+                        </td>
+                        <td>
+                          {module === 'inventario' ? (
+                            <>
+                              <strong className={r.status === 'crítico' ? 'negative' : ''}>
+                                {r.stock} {r.unit}
+                              </strong>
+                              <div className="cell-sub">
+                                Mínimo {r.min} {r.unit} · {usd(Number(r.cost))}/{r.unit}
+                              </div>
+                            </>
+                          ) : module === 'clientes' ? (
+                            <>
+                              <Money amount={Number(r.credit ?? 0)} />
+                              <div className="cell-sub">{r.days ?? 30} días de crédito</div>
+                            </>
+                          ) : module === 'personal' ? (
+                            <>
+                              <strong>{r.hours} h</strong>
+                              <div className="cell-sub">{usd(Number(r.cost))}/h</div>
+                            </>
+                          ) : module === 'compras' ? (
+                            <>
+                              <strong>
+                                {r.received ?? 0} / {r.quantity ?? 1}
+                              </strong>
+                              <div className="cell-sub">
+                                <Money amount={Number(r.amount)} />
+                              </div>
+                            </>
+                          ) : (
+                            <Money
+                              amount={
+                                module === 'cobros'
+                                  ? Number(r.amount) - Number(r.paid)
+                                  : Number(r.amount ?? 0)
+                              }
+                              rate={
+                                module === 'facturacion' || module === 'cobros'
+                                  ? Number(r.exchange_rate)
+                                  : undefined
+                              }
+                            />
+                          )}
+                        </td>
+                        <td>
+                          {module === 'cotizaciones' || module === 'ordenes' ? (
+                            <span
+                              className={
+                                Number(r.amount) > 0
+                                  ? (1 - Number(r.cost) / Number(r.amount)) * 100 >= 35
+                                    ? 'positive'
+                                    : (1 - Number(r.cost) / Number(r.amount)) * 100 >= 20
+                                      ? 'warning'
+                                      : 'negative'
+                                  : 'muted'
+                              }
+                            >
+                              {(Number(r.amount) > 0
+                                ? (1 - Number(r.cost) / Number(r.amount)) * 100
+                                : 0
+                              ).toFixed(1)}
+                              %
+                              <div className="cell-sub">
+                                {usd(Number(r.amount) - Number(r.cost))}
+                              </div>
+                            </span>
+                          ) : module === 'inventario' ? (
+                            <span className="mono">
+                              {r.stock && Number(r.stock) < Number(r.min)
+                                ? 'REPOSICIÓN'
+                                : 'STOCK SALUDABLE'}
+                            </span>
+                          ) : module === 'clientes' ? (
+                            <span className="cell-sub">
+                              {r.sector}
+                              <br />
+                              {r.segment}
+                            </span>
+                          ) : module === 'personal' ? (
+                            <span className="cell-sub">{r.certification}</span>
+                          ) : module === 'gastos' ? (
+                            <>
+                              <span className="cell-sub">Presupuesto: {usd(Number(r.budget))}</span>
+                              <div className="progress">
+                                <div
+                                  className="progress-fill"
+                                  style={{
+                                    width: `${Math.min(
+                                      100,
+                                      (Number(r.amount) / Math.max(1, Number(r.budget))) * 100,
+                                    )}%`,
+                                  }}
+                                />
+                              </div>
+                              <div className="cell-sub">
+                                {r.recurring ? 'Recurrente' : 'No recurrente'}
+                              </div>
+                            </>
+                          ) : module === 'cobros' ? (
+                            <span className="cell-sub">
+                              Vence: {r.due}
+                              <br />
+                              Tasa emitida: {r.exchange_rate}
+                            </span>
+                          ) : module === 'facturacion' ? (
+                            <span className="mono">CTRL {r.control}</span>
+                          ) : (
+                            <span className="cell-sub">{r.priority ?? r.date}</span>
+                          )}
+                        </td>
+                        <td>
+                          <Status status={r.status} />
+                        </td>
+                        <td>
+                          <div className="table-actions">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Ver detalle"
+                              onClick={() => onDialog({ module, row: r, mode: 'detail' })}
+                            >
+                              <Eye />
+                            </Button>
+                            {module === 'cobros' ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onDialog({ module, row: r, mode: 'payment' })}
+                              >
+                                PAGAR
+                              </Button>
+                            ) : module === 'inventario' ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Registrar movimiento"
+                                onClick={() => onDialog({ module, row: r, mode: 'stock' })}
+                              >
+                                <Plus />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Gestionar registro"
+                                onClick={() => onDialog({ module, row: r, mode: 'detail' })}
+                              >
+                                <ArrowUpRight />
+                              </Button>
+                            )}
+                            {DELETABLE_MODULES.includes(module) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                                title="Eliminar registro"
+                                onClick={() =>
+                                  setDeleteTarget({
+                                    id: r.id,
+                                    name: String(r.name ?? r.client ?? r.description ?? r.id),
+                                  })
+                                }
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!filtered.length && (
+                  <div className="empty-state">No hay registros que coincidan con tu búsqueda.</div>
+                )}
+              </div>
+              <div className="table-footer">
+                <span>{filtered.length} REGISTROS · FAMESA C.A.</span>
+                <span>USD BASE {f.mirror ? ' / Bs. ESPEJO' : ''}</span>
+              </div>
+            </section>
+          )}
+        </>
+      )}
+
+      {deleteTarget && (
+        <Modal
+          title="Confirmar eliminación"
+          subtitle={`Esta acción eliminará el registro ${deleteTarget.id} de manera irreversible.`}
+          onClose={() => setDeleteTarget(null)}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+                CANCELAR
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  f.deleteRecord(module, deleteTarget.id);
+                  setDeleteTarget(null);
+                }}
+              >
+                <Trash2 size={16} /> ELIMINAR DEFINITIVAMENTE
+              </Button>
+            </>
+          }
+        >
+          <div className="p-4 bg-red-950/20 border border-red-500/30 rounded-lg text-sm text-red-200">
+            <p>
+              ¿Estás seguro de que deseas eliminar <strong>{deleteTarget.name}</strong> (
+              {deleteTarget.id})?
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Si el elemento está asociado a órdenes o cotizaciones existentes, verifique antes de
+              proceder.
+            </p>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
 }
-function Aging(){const f=useFamesa();const ranges=[{name:'0–30 DÍAS',min:0,max:30},{name:'31–60 DÍAS',min:31,max:60},{name:'61–90 DÍAS',min:61,max:90},{name:'+90 DÍAS',min:91,max:9999}];return <div className="aging-grid">{ranges.map((range,i)=>{const amount=f.data.facturacion.filter(r=>{const days=Math.max(0,Math.floor((Date.now()-Date.parse(String(r.date)))/86400000));return days>=range.min&&days<=range.max;}).reduce((s,r)=>s+Number(r.amount)-Number(r.paid),0);return <div className="aging-item" key={range.name}><span className="eyebrow muted">{range.name}</span><strong className={i>1?'negative':''}>{usd(amount)}</strong>{f.mirror&&<span className="mono muted">{ves(amount*f.rate)}</span>}</div>;})}</div>;}
-function Reports(){const f=useFamesa();const revenue=f.data.facturacion.reduce((s,r)=>s+Number(r.base??0),0),cost=f.data.ordenes.reduce((s,r)=>s+Number(r.cost??0),0),expenses=f.data.gastos.reduce((s,r)=>s+Number(r.amount),0),net=revenue-cost-expenses,cashflow=buildCashflow(revenue,expenses);return <><div className="module-stats">{[['Ingresos',revenue],['Utilidad bruta',revenue-cost],['Utilidad neta',net],['Margen neto',revenue?net/revenue*100:0]].map(([label,value],i)=><div className="module-stat" key={String(label)}><span className="eyebrow muted">{label}</span><div className={`value ${Number(value)<0?'negative':'positive'}`}>{i===3?Number(value).toFixed(1)+'%':usd(Number(value))}</div></div>)}</div><div className="report-layout"><section className="panel"><div className="panel-header"><h2>Estado de resultados · Octubre 2026</h2></div>{[['Ventas netas',revenue],['Costo directo de producción',-cost],['Utilidad bruta',revenue-cost],['Gastos operativos',-expenses],['Resultado neto',net]].map(([name,amount],i)=><div className={`pnl-row ${i===4?'total':''}`} key={String(name)}><span>{name}</span><span>{usd(Number(amount))}</span></div>)}</section><section className="panel"><div className="panel-header"><h2>Flujo de caja · Ingresos / egresos</h2></div><div className="chart-wrap"><CashChart data={cashflow}/></div></section></div><h2 className="detail-section">Rentabilidad por orden de trabajo</h2><div className="panel table-wrap"><table><thead><tr><th>OT / servicio</th><th>Cliente</th><th>Venta</th><th>Costo estimado / real</th><th>Margen</th><th>Resultado</th></tr></thead><tbody>{f.data.ordenes.map(r=><tr key={r.id}><td><span className="mono">{r.id}</span><div className="cell-sub">{r.description}</div></td><td>{r.client}</td><td><Money amount={Number(r.amount)}/></td><td>{usd(Number(r.estimated))} / {usd(Number(r.cost))}</td><td>{((1-Number(r.cost)/Number(r.amount))*100).toFixed(1)}%</td><td><span className={Number(r.cost)>Number(r.estimated)?'negative':'positive'}>{Number(r.cost)>Number(r.estimated)?'SOBRECOSTO':'EN PRESUPUESTO'}</span></td></tr>)}</tbody></table></div><h2 className="detail-section">Margen por cliente y servicio</h2><div className="panel table-wrap"><table><thead><tr><th>Cliente</th><th>Servicio</th><th>Venta USD</th><th>Utilidad bruta</th><th>Margen %</th></tr></thead><tbody>{f.data.clientes.map(c=>{const orders=f.data.ordenes.filter(o=>o.client===c.name),sales=orders.reduce((s,r)=>s+Number(r.amount),0),profit=orders.reduce((s,r)=>s+Number(r.amount)-Number(r.cost),0);return <tr key={c.id}><td>{c.name}</td><td>{orders[0]?.description??'Sin producción'}</td><td>{usd(sales)}</td><td>{usd(profit)}</td><td>{sales?(profit/sales*100).toFixed(1):0}%</td></tr>;})}</tbody></table></div><div className="notice">Serie histórica ilustrativa de flujo de caja. Estado de resultados y rentabilidad calculados desde los registros de esta sesión.</div></>;}
-function Settings(){const f=useFamesa();const [rate,setRate]=useState(String(f.rate)),[name,setName]=useState('FAMESA C.A.'),[address,setAddress]=useState('Santa Rosa, Valencia, Carabobo, Venezuela');return <><section className="settings-section"><h2>Identidad fiscal y planta</h2><div className="form-grid settings-fields"><Field label="Razón social"><input value={name} onChange={e=>setName(e.target.value)}/></Field><Field label="RIF"><input defaultValue="J-31352388-7"/></Field><Field label="Dirección fiscal"><input value={address} onChange={e=>setAddress(e.target.value)}/></Field><Field label="Registro mercantil"><input defaultValue="Primero N° 71, Tomo 44-A"/></Field><Field label="Superficie de planta"><input defaultValue="600 m²"/></Field><Field label="Actividad económica"><input defaultValue="Metalmecánica · Mecanizado CNC"/></Field></div><Button className="mt-5" onClick={()=>{f.add('ajustes',{id:'CONFIG-'+Date.now(),name,description:address,status:'actualizado'});}}><Save/> GUARDAR DATOS FISCALES</Button></section><section className="settings-section"><h2>Motor de moneda dual</h2><div className="form-grid settings-fields"><Field label="Tasa USD → VES"><input type="number" min="0.01" step="0.01" value={rate} onChange={e=>setRate(e.target.value)}/></Field><Field label="Visualización"><select value={f.mirror?'dual':'usd'} onChange={e=>f.setMirror(e.target.value==='dual')}><option value="dual">USD + Bs. espejo</option><option value="usd">Solo USD</option></select></Field></div><Button onClick={()=>f.setRate(Number(rate))} className="mt-5"><Save/> ACTUALIZAR TASA</Button><div className="notice">Las facturas emitidas conservan la tasa histórica. IVA 16%. IGTF 3% sobre pagos recibidos en Efectivo USD o Zelle.</div></section><section className="settings-section"><h2>Numeración de documentos</h2><div className="form-grid settings-fields">{[['Cotizaciones emitidas',f.data.cotizaciones.length],['Órdenes de trabajo',f.data.ordenes.length],['Facturas fiscales',f.data.facturacion.length],['Comprobantes de pago',f.data.cobros.length]].map(([n,v])=><Field key={n} label={String(n)}><input value={v} readOnly/></Field>)}</div></section><section className="settings-section"><h2>Sincronización con Turso (libSQL) & Sesión</h2><div className="notice warning-notice">El selector de rol en la barra lateral permite probar en vivo las restricciones de acceso por perfil (admin, gerente, ventas, taller, almacén, contabilidad).</div><div className="flex gap-3 flex-wrap"><Button variant="outline" disabled={f.cloudBusy} onClick={()=>void f.saveCloud()}>GUARDAR INSTANTÁNEA</Button><Button variant="outline" disabled={f.cloudBusy} onClick={()=>void f.loadCloud()}>RECUPERAR INSTANTÁNEA</Button></div><p className="muted text-xs mt-4">Usuario activo: {f.userEmail} · Base de datos: Turso (famesa)</p></section><section className="settings-section"><h2>Matriz de roles · Simulación</h2><div className="table-wrap"><table><thead><tr><th>Módulo</th>{Object.keys(roles).map(r=><th key={r}>{r}</th>)}</tr></thead><tbody>{Object.keys(moduleInfo).map(m=><tr key={m}><td>{moduleInfo[m as ModuleKey].title}</td>{Object.keys(roles).map(r=><td key={r} className={canAccess(r as keyof typeof roles,m)?'positive':'muted'}>{canAccess(r as keyof typeof roles,m)?'✓':'—'}</td>)}</tr>)}</tbody></table></div></section><section className="settings-section"><h2>Bitácora de auditoría</h2><table><thead><tr><th>Fecha / hora</th><th>Acción</th><th>Rol</th></tr></thead><tbody>{f.audits.map((a,i)=><tr key={i}><td className="mono">{a.time}</td><td>{a.action}</td><td>{a.role}</td></tr>)}</tbody></table>{!f.audits.length&&<div className="empty-state">Las acciones de esta sesión se registrarán aquí.</div>}</section></>;}
-export function RecordDialog({state,onClose,onChange}:{state:DialogState;onClose:()=>void;onChange:(s:DialogState)=>void}){const f=useFamesa();const {module,mode}=state;const row=state.row?f.data[module==='cobros'?'facturacion':module].find(r=>r.id===state.row?.id)??state.row:undefined;
- const [name,setName]=useState(String(row?.name??'')),[client,setClient]=useState(String(row?.client??f.data.clientes[0]?.name??'')),[description,setDescription]=useState(String(row?.description??'')),[amount,setAmount]=useState(String(mode==='payment'?row?Number(row.amount)-Number(row.paid):0:row?.amount??1000)),[qty,setQty]=useState(String(mode==='receive'?Number(row?.quantity)-Number(row?.received):row?.quantity??1)),[material,setMaterial]=useState(String(row?.material??row?.id??'MAT-003')),[machine,setMachine]=useState(String(row?.machine??'CNC-01')),[operator,setOperator]=useState(String(row?.operator??'Carlos Méndez')),[machineHours,setMachineHours]=useState(String(row?.machineHours??12)),[laborHours,setLaborHours]=useState(String(row?.laborHours??14)),[price,setPrice]=useState(String(Number(row?.amount??4850)/Number(row?.quantity??1))),[method,setMethod]=useState('Transferencia Bs.'),[moveType,setMoveType]=useState('Entrada'),[reference,setReference]=useState(''),[invoiceId,setInvoiceId]=useState(String(row?.id??f.data.facturacion.find(r=>Number(r.amount)>Number(r.paid))?.id??'')),[status,setStatus]=useState(row?.status??'pendiente'),[quality,setQuality]=useState(''),[phone,setPhone]=useState(String(row?.phone??'')),[rif,setRif]=useState(String(row?.rif??'')),[budget,setBudget]=useState(String(row?.budget??1000)),[recurring,setRecurring]=useState(Boolean(row?.recurring)),[priority,setPriority]=useState(String(row?.priority??'Estándar'));
- const [unit,setUnit]=useState(String(row?.unit??'kg')),[location,setLocation]=useState(String(row?.location??'Patio Barras')),[minStock,setMinStock]=useState(String(row?.min??50)),[standard,setStandard]=useState(String(row?.standard??'Torno CNC')),[capacity,setCapacity]=useState(String(row?.capacity??176)),[maintenance,setMaintenance]=useState(String(row?.maintenance??new Date().toISOString().slice(0,10))),[confirmDelete,setConfirmDelete]=useState(false);
- const selectedMaterial=f.data.inventario.find(r=>r.id===material),selectedMachine=f.data.taller.find(r=>r.id===machine),selectedOperator=f.data.personal.find(r=>r.name===operator);const calc=quoteTotals(Number(qty),Number(selectedMaterial?.cost??0),Number(machineHours),Number(selectedMachine?.cost??28),Number(laborHours),Number(selectedOperator?.cost??8.5),Number(price));
- const action=()=>{if(mode==='create'&&module==='inventario'){if(!name){toast.error('Ingresa el nombre o especificación del material');return;}const id=nextId('MAT',f.data.inventario,3);const record:RecordData={id,name,status:Number(qty)<=Number(minStock)?'crítico':'disponible',stock:Number(qty),min:Number(minStock),unit,cost:Number(amount),location,kardex:`Inventario inicial: ${qty} ${unit} registrado el ${new Date().toLocaleDateString('es-VE')}`};f.add('inventario',record);onClose();return;}if(mode==='create'&&module==='taller'){if(!name){toast.error('Ingresa el nombre de la máquina');return;}const id=nextId('MCH',f.data.taller,2);const record:RecordData={id,name,status:'operativa',hours:0,capacity:Number(capacity),ot:'—',maintenance,cost:Number(amount),standard};f.add('taller',record);onClose();return;}if(mode==='stock'){const id=selectedMaterial?.id??'';if(!reference){toast.error('Indica la referencia del movimiento');return;}f.moveStock(id,Number(qty),moveType,reference);if(Number(qty)>0&&((moveType==='Entrada'||moveType==='Ajuste positivo')||Number(selectedMaterial?.stock)>=Number(qty)))onClose();return;}if(mode==='payment'){const target=f.data.facturacion.find(r=>r.id===invoiceId);if(!target||Number(amount)<=0||Number(amount)>Number(target.amount)-Number(target.paid)){toast.error('Revisa el importe y el saldo de la factura');return;}f.payment(invoiceId,Number(amount),method);onClose();return;}if(mode==='receive'){if(!row||Number(qty)<=0||Number(qty)>Number(row.quantity)-Number(row.received)){toast.error('Revisa la cantidad pendiente');return;}f.receive(row.id,Number(qty));onClose();return;}if(mode==='quality'){if(!row||!quality){toast.error('Registra el resultado dimensional y firma');return;}f.update('ordenes',row.id,{quality:`${quality} mm · Conforme · ${operator}`,status:'terminada',progress:100});onClose();return;}if(mode==='work'){if(!row||Number(laborHours)<=0){toast.error('Indica horas válidas');return;}f.update('ordenes',row.id,{machine,operator,hours:Number(row.hours??0)+Number(laborHours),cost:Number(row.cost??0)+Number(laborHours)*Number(selectedOperator?.cost??8.5)+Number(machineHours)*Number(selectedMachine?.cost??28),work_logs:`${row.work_logs??''}\n${operator} · ${laborHours} h operario / ${machineHours} h ${machine}`,status:'en_proceso',progress:Math.min(85,Number(row.progress??0)+15)});onClose();return;}if(!description&&module!=='clientes'&&module!=='personal'&&module!=='taller'){toast.error('Describe el trabajo o el registro');return;}if(['clientes','personal'].includes(module)&&!name){toast.error('Indica un nombre');return;}if(module==='cotizaciones'&&(Number(qty)<=0||Number(price)<=0||Number(machineHours)<0||Number(laborHours)<0)){toast.error('Revisa las cantidades y costos');return;}if(module==='facturacion'&&Number(amount)<=0){toast.error('El importe debe ser mayor que cero');return;}const prefixes:Record<string,string>={leads:'RFQ',cotizaciones:'COT',ordenes:'OT',clientes:'CLI',compras:'COM',facturacion:'FAC',gastos:'GAS',personal:'PER',taller:'MCH',inventario:'MAT'};const id=`${prefixes[module]??'REG'}-${String(1+f.data[module].length).padStart(5,'0')}`;let record:RecordData={id,name:name||undefined,client,description,status:module==='cotizaciones'?'borrador':module==='leads'?'nuevo':['clientes','personal'].includes(module)?'activo':'pendiente',amount:Number(amount),cost:0,exchange_rate:f.rate,amount_ves:Number(amount)*f.rate,date:'2026-10-12',priority};if(module==='cotizaciones')record={...record,amount:calc.total,cost:calc.cost,amount_ves:calc.total*f.rate,material,quantity:Number(qty),machineHours:Number(machineHours),laborHours:Number(laborHours),machine,operator};if(module==='facturacion'){const totals=invoiceTotals(Number(amount),f.rate);const c=f.data.clientes.find(c=>c.name===client);record={...record,...totals,amount:totals.total,control:`00-${String(1+f.data.facturacion.length).padStart(6,'0')}`,paid:0,rif:c?.rif,address:c?.address,due:'2026-11-11'};}if(module==='clientes')record={...record,rif,phone,credit:Number(amount),days:30,sector:description,segment:'Industrial',address:'Por completar'};if(module==='personal')record={...record,cost:Number(amount),hours:0};if(module==='gastos')record={...record,name:name||'Servicios',voucher:reference,recurring,budget:Number(budget),status:'registrado'};if(module==='compras')record={...record,name:name||'Sumindu',material,quantity:Number(qty),received:0};if(module==='ordenes')record={...record,machine,operator,material,materialQty:Number(qty),reserved:false,estimated:Number(amount)*.6,cost:0,hours:0,progress:0,quality:'',due:'2026-10-28'};if(module==='leads')record={...record,consent:'Consentimiento pendiente de verificación'};if(module==='taller'){if(!row){toast.error('Selecciona una máquina desde su detalle para programar mantenimiento');return;}}
- if(row&&mode==='create')f.update(module,row.id,{...record,id:row.id});else f.add(module,record);onClose();};
- const printDocument=(record:RecordData)=>onChange({module,row:record,mode:'print'});
- if(mode==='print'&&row)return <Modal wide title={module==='cotizaciones'?'Vista previa de cotización':'Documento fiscal · Vista previa'} onClose={onClose} footer={<><Button variant="outline" onClick={onClose}>CERRAR</Button><Button onClick={()=>window.print()}><Printer/> IMPRIMIR / GUARDAR PDF</Button></>}><div className="document"><div className="document-brand"><div><h2>FAMESA C.A.</h2><p>RIF J-31352388-7<br/>Santa Rosa, Valencia, Carabobo · Venezuela<br/>Reg. Mercantil Primero N° 71, Tomo 44-A</p></div><div className="mono">METALMECÁNICA DE PRECISIÓN<br/>CNC · ASME / AWS<br/>FECHA: {row.date}</div></div><div className="document-title"><h3>{module==='cotizaciones'?'COTIZACIÓN COMERCIAL':'FACTURA FISCAL'}</h3><strong className="mono">{row.id}</strong></div><div className="detail-grid"><div><span className="field-label">Razón social / comprador</span><p><strong>{row.client}</strong></p><p className="muted">RIF: {row.rif??f.data.clientes.find(c=>c.name===row.client)?.rif}<br/>Dirección: {row.address??f.data.clientes.find(c=>c.name===row.client)?.address}</p></div><div><p>Control fiscal: <strong className="mono">{row.control??'No aplica'}</strong></p><p>Tasa congelada: <strong>{row.exchange_rate} Bs./USD</strong></p></div></div><table><thead><tr><th>Descripción</th><th>Cantidad</th><th>Total USD</th><th>Total Bs.</th></tr></thead><tbody><tr><td>{row.description}</td><td>{row.quantity??1}</td><td>{usd(Number(row.base??row.amount))}</td><td>{ves(Number(row.base??row.amount)*Number(row.exchange_rate))}</td></tr></tbody></table><div className="document-totals">{(module==='cotizaciones'?[['Subtotal',row.amount],['IVA 16% (referencial)',Number(row.amount)*.16],['Total con IVA',Number(row.amount)*1.16]]:[['Base imponible',row.base],['IVA 16%',row.iva],['IGTF registrado en pagos',row.igtf_collected??0],['TOTAL FACTURA',row.amount]]).map(([label,value],i)=><div key={String(label)} className={`document-total-row ${i===(module==='cotizaciones'?2:3)?'final':''}`}><span>{label}</span><span>{usd(Number(value))}<small className="block text-xs muted">{ves(Number(value)*Number(row.exchange_rate))}</small></span></div>)}</div><p className="muted text-xs mt-8">{module==='cotizaciones'?'Validez: 15 días. Entrega y condiciones sujetas a aprobación técnica.':'Documento de muestra. La emisión fiscal oficial y su numeración deben validarse con su asesor tributario.'}</p><div className="document-total-row mt-8"><span>ELABORADO POR __________________</span><span>RECIBIDO CONFORME __________________</span></div></div></Modal>;
- if(mode==='detail'&&row){const c=module==='clientes'?row:f.data.clientes.find(c=>c.name===row.client);const related=['cotizaciones','ordenes','facturacion'] as const;return <><Modal wide title={`${row.id} · ${moduleInfo[module].title}`} subtitle={String(row.name??row.client??row.description)} onClose={onClose} footer={<>{['inventario','taller'].includes(module)&&<Button variant="ghost" className="text-red-500 hover:text-red-400 hover:bg-red-500/10 mr-auto" onClick={()=>setConfirmDelete(true)}><Trash2 size={16}/> ELIMINAR REGISTRO</Button>}<Button variant="outline" onClick={onClose}>CERRAR</Button>{['cotizaciones','facturacion'].includes(module)&&<Button variant="outline" onClick={()=>printDocument(row)}><Printer/> VER DOCUMENTO / PDF</Button>}{module==='leads'&&<Button variant="industrial" onClick={()=>{f.convertLead(row.id);onClose();}}>CONVERTIR A CLIENTE + COTIZACIÓN <ArrowRight/></Button>}{module==='cotizaciones'&&<Button variant="industrial" disabled={Boolean(row.ot)} onClick={()=>{f.approveQuote(row.id);onClose();}}>APROBAR Y CONVERTIR A OT <ArrowRight/></Button>}{module==='ordenes'&&<Button variant="industrial" onClick={()=>{f.invoiceOrder(row.id);}}>GENERAR FACTURA SENIAT</Button>}{module==='compras'&&<Button disabled={row.status==='recibida'} onClick={()=>onChange({module,row,mode:'receive'})}>REGISTRAR RECEPCIÓN</Button>}{module==='inventario'&&<Button onClick={()=>onChange({module,row,mode:'stock'})}><Plus/> MOVIMIENTO</Button>}{module==='cobros'&&<Button variant="industrial" onClick={()=>onChange({module,row,mode:'payment'})}>REGISTRAR PAGO</Button>}{['clientes','gastos','personal','cotizaciones'].includes(module)&&<Button variant="outline" onClick={()=>onChange({module,row,mode:'create'})}>EDITAR</Button>}</>}><div className="detail-grid">{[['Estado',<Status key="det-status" status={row.status}/>],['Descripción',row.description??row.name],['Cliente / cuenta',row.client??row.name],['Valor USD',<Money key="det-amount" amount={Number(row.amount??row.credit??row.cost??0)} rate={module==='facturacion'?Number(row.exchange_rate):undefined}/>]].map(([label,val])=><div className="detail-field" key={String(label)}><span className="field-label">{label}</span><strong>{val}</strong></div>)}</div>
- {module==='leads'&&<><h2 className="detail-section">Seguimiento RFQ</h2><Field label="Estado de oportunidad"><select value={status} onChange={e=>{setStatus(e.target.value);f.update(module,row.id,{status:e.target.value});}}>{['nuevo','contactado','cotizado','ganado','perdido'].map(s=><option key={s}>{s}</option>)}</select></Field><div className="notice">Privacidad y consentimiento: {row.consent}<br/>Prioridad: {row.priority}</div></>}
- {module==='cotizaciones'&&<><h2 className="detail-section">Costos y rentabilidad</h2><div className="cost-summary"><div><span className="field-label">Venta</span><div className="value">{usd(Number(row.amount))}</div></div><div><span className="field-label">Costo estimado</span><div className="value">{usd(Number(row.cost))}</div></div><div><span className="field-label">Margen bruto</span><div className="value">{((1-Number(row.cost)/Number(row.amount))*100).toFixed(1)}%</div></div></div><p className="muted text-xs mt-4">Material: {f.data.inventario.find(m=>m.id===row.material)?.name??'Por definir'} · Cantidad {row.quantity} · Máquina {row.machineHours} h · Operario {row.laborHours} h</p>{row.ot&&<div className="notice">Orden vinculada: {row.ot}</div>}</>}
- {module==='ordenes'&&<><h2 className="detail-section">Producción y control dimensional</h2><div className="form-grid"><Field label="Estado de producción"><select value={status} onChange={e=>{const s=e.target.value;if(s==='terminada'&&!row.quality){toast.error('Firma el control de calidad antes de terminar');return;}setStatus(s);f.update(module,row.id,{status:s,progress:s==='control_calidad'?90:row.progress});}}>{['pendiente','en_proceso','control_calidad','terminada','facturada'].map(s=><option key={s}>{s}</option>)}</select></Field><Field label="Prioridad"><select value={priority} onChange={e=>{setPriority(e.target.value);f.update(module,row.id,{priority:e.target.value});}}>{['Emergencia 24-48h','Prioritaria','Estándar'].map(s=><option key={s}>{s}</option>)}</select></Field></div><div className="detail-grid mt-5"><div>Máquina: <strong>{row.machine}</strong><br/>Operario: {row.operator}<br/>Horas: {row.hours}</div><div>Estimado: {usd(Number(row.estimated))}<br/>Real: {usd(Number(row.cost))}<br/>Material: {row.reserved?'Reservado / descontado':'Pendiente de asignación'}</div></div><div className="flex gap-3 mt-5 flex-wrap"><Button variant="outline" onClick={()=>onChange({module,row,mode:'work'})}>REGISTRAR HORAS</Button><Button variant="outline" onClick={()=>onChange({module,row,mode:'quality'})}><Check/> CONTROL DIMENSIONAL</Button></div><h3 className="detail-section">Registro de trabajo</h3><div className="timeline">{row.work_logs??'Sin registros adicionales de trabajo'}</div><h3 className="detail-section">Control de calidad</h3><div className="notice">{row.quality||'Pendiente de firma dimensional'}</div></>}
- {module==='inventario'&&<><div className="cost-summary"><div><span className="field-label">Existencia</span><div className="value">{row.stock} {row.unit}</div></div><div><span className="field-label">Mínimo</span><div className="value">{row.min} {row.unit}</div></div><div><span className="field-label">Costo promedio</span><div className="value">{usd(Number(row.cost))}</div></div></div><h2 className="detail-section">Kardex · {row.location}</h2><div className="timeline">{row.kardex}</div></>}
- {module==='taller'&&<><h2 className="detail-section">Disponibilidad de máquina</h2><div className="form-grid"><Field label="Estado"><select value={status} onChange={e=>{setStatus(e.target.value);f.update(module,row.id,{status:e.target.value});}}>{['operativa','ocupada','mantenimiento','parada'].map(s=><option key={s}>{s}</option>)}</select></Field><Field label="Próximo mantenimiento"><input type="date" defaultValue={String(row.maintenance)} onChange={e=>f.update(module,row.id,{maintenance:e.target.value})}/></Field><Field label="Tipo de mantenimiento"><select defaultValue="Preventivo" onChange={e=>f.update(module,row.id,{maintenance_type:e.target.value})}><option>Preventivo</option><option>Correctivo</option></select></Field><Field label="OT actual"><select defaultValue={String(row.ot)} onChange={e=>f.update(module,row.id,{ot:e.target.value,status:e.target.value==='—'?'operativa':'ocupada'})}><option>—</option>{f.data.ordenes.map(o=><option key={o.id}>{o.id}</option>)}</select></Field></div><div className="notice">Uso acumulado: {row.hours} h · Capacidad mensual: {row.capacity} h · Tarifa: {usd(Number(row.cost))}/h</div></>}
- {module==='clientes'&&<><h2 className="detail-section">Perfil de cuenta 360°</h2><div className="detail-grid"><div>RIF: <strong>{row.rif}</strong><br/>Sector: {row.sector}<br/>Dirección: {row.address}</div><div>Contacto: <strong>{row.contact??'Por completar'}</strong><br/>Crédito: {usd(Number(row.credit))} / {row.days??30} días</div></div><h3 className="detail-section">Historial de interacciones</h3><div className="timeline">{row.interaction??'Sin interacciones registradas'}</div><div className="form-grid mt-5"><Field label="Nueva interacción / visita / llamada"><input value={reference} onChange={e=>setReference(e.target.value)} placeholder="Resumen de la visita técnica..."/></Field><Field label="WhatsApp (código país y número)"><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="58..."/></Field></div><div className="flex gap-2 mt-3"><Button variant="outline" onClick={()=>{if(!reference&&!phone){toast.error('Añade una interacción o teléfono');return;}f.update(module,row.id,{interaction:`${row.interaction??''}\n${reference}`,phone});setReference('');}}>GUARDAR INTERACCIÓN</Button><Button variant="outline" onClick={()=>sendWhatsApp(phone,`Hola, le contactamos de FAMESA C.A. respecto a sus servicios industriales.`)}><Send/> WHATSAPP</Button></div>{related.map(m=><div key={m}><h3 className="detail-section">{moduleInfo[m].title}</h3>{f.data[m].filter(r=>r.client===row.name).map(r=><div key={r.id} className="pnl-row"><Button variant="link" onClick={()=>onChange({module:m,row:r,mode:'detail'})}>{r.id}</Button><Status status={r.status}/><Money amount={Number(r.amount)}/></div>)}</div>)}</>}
- {['facturacion','cobros'].includes(module)&&<><div className="cost-summary"><div><span className="field-label">Base + IVA 16%</span><div className="value">{usd(Number(row.amount))}</div></div><div><span className="field-label">Pagado</span><div className="value">{usd(Number(row.paid))}</div></div><div><span className="field-label">Saldo</span><div className="value">{usd(Number(row.amount)-Number(row.paid))}</div></div></div><div className="notice">Tasa histórica: {row.exchange_rate} Bs./USD · Total congelado: {ves(Number(row.amount_ves))}<br/>RIF comprador: {row.rif} · Control: {row.control}<br/>Base: {usd(Number(row.base))} · IVA: {usd(Number(row.iva))} · IGTF en pagos: {usd(Number(row.igtf_collected??0))}</div><div className="form-grid"><Field label="WhatsApp de cobranza"><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="58..."/></Field><Field label="Monto nota de crédito USD"><input type="number" min="0" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}/></Field></div><div className="flex gap-3 mt-4 flex-wrap"><Button variant="outline" onClick={()=>sendWhatsApp(phone,`Estimados ${row.client}, FAMESA C.A. les recuerda el saldo ${usd(Number(row.amount)-Number(row.paid))} de la factura ${row.id}, vencimiento ${row.due}. Gracias.`)}><Send/> RECORDATORIO WHATSAPP</Button><Button variant="outline" onClick={()=>{const n=Number(amount);if(n<=0||n>Number(row.amount)-Number(row.paid)){toast.error('Nota debe ser positiva y no exceder saldo');return;}f.update('facturacion',row.id,{amount:Number(row.amount)-n,amount_ves:(Number(row.amount)-n)*Number(row.exchange_rate),credit_note:`NC-${row.id}`,credit_amount:n,status:Number(row.amount)-n<=Number(row.paid)?'pagada':row.status});}}>EMITIR NOTA DE CRÉDITO</Button></div></>}
- {module==='compras'&&<div className="notice">Ordenado: {row.quantity} · Recibido: {row.received} · Pendiente: {Number(row.quantity)-Number(row.received)}<br/>Presupuestado: {usd(Number(row.amount))} · Costo real: {usd(Number(row.cost))}</div>}
- {module==='personal'&&<><div className="notice">Tarifa por hora: {usd(Number(row.cost))} · Horas registradas: {row.hours}<br/>Certificación: {row.certification??'Por completar'}</div><h3 className="detail-section">Órdenes asignadas</h3>{f.data.ordenes.filter(o=>o.operator===row.name).map(o=><div className="pnl-row" key={o.id}><span>{o.id} · {o.description}</span><span>{o.hours} h</span></div>)}</>}
- </Modal>{confirmDelete&&<Modal title="Confirmar eliminación" subtitle={`Esta acción eliminará el registro ${row.id} de manera irreversible.`} onClose={()=>setConfirmDelete(false)} footer={<><Button variant="outline" onClick={()=>setConfirmDelete(false)}>CANCELAR</Button><Button variant="destructive" onClick={()=>{f.deleteRecord(module,row!.id);setConfirmDelete(false);onClose();}}><Trash2 size={16}/> ELIMINAR DEFINITIVAMENTE</Button></>}><div className="p-4 bg-red-950/20 border border-red-500/30 rounded-lg text-sm text-red-200"><p>¿Estás seguro de que deseas eliminar <strong>{String(row.name??row.client??row.id)}</strong> ({row.id})?</p><p className="mt-2 text-xs text-muted-foreground">Si el elemento está asociado a órdenes o cotizaciones existentes, verifique antes de proceder.</p></div></Modal>}</>;}
- const isQuote=module==='cotizaciones'&&(mode==='create');const title=mode==='stock'?'Registrar movimiento de material':mode==='payment'?'Registrar pago y comprobante':mode==='receive'?'Recepción de compra':mode==='work'?'Registro de horas de trabajo':mode==='quality'?'Control dimensional y firma':`${row?'Editar':'Nuevo registro'} · ${moduleInfo[module].title}`;
- return <Modal title={title} subtitle="FAMESA C.A. · Registro trazable de operación" onClose={onClose} wide={isQuote} footer={<><Button variant="outline" onClick={onClose}>CANCELAR</Button><Button variant="industrial" onClick={action}><Save/> {isQuote?'GUARDAR COTIZACIÓN':'REGISTRAR'}</Button></>}><div className="form-grid">
- {mode==='stock'?<><Field label="Material"><select value={material} onChange={e=>setMaterial(e.target.value)}>{f.data.inventario.map(m=><option value={m.id} key={m.id}>{m.name} · {m.stock} {m.unit}</option>)}</select></Field><Field label="Tipo de movimiento"><select value={moveType} onChange={e=>setMoveType(e.target.value)}>{['Entrada','Salida a OT','Ajuste positivo','Ajuste negativo','Merma'].map(t=><option key={t}>{t}</option>)}</select></Field><Field label="Cantidad"><input type="number" min="0.01" value={qty} onChange={e=>setQty(e.target.value)}/></Field><Field label="Referencia / OT / comprobante"><input value={reference} onChange={e=>setReference(e.target.value)}/></Field></>:mode==='payment'?<><Field label="Factura con saldo"><select value={invoiceId} onChange={e=>{setInvoiceId(e.target.value);const invoice=f.data.facturacion.find(r=>r.id===e.target.value);setAmount(String(Number(invoice?.amount)-Number(invoice?.paid)));}}>{f.data.facturacion.filter(r=>Number(r.amount)>Number(r.paid)).map(r=><option value={r.id} key={r.id}>{r.id} · {r.client}</option>)}</select></Field><Field label="Método de pago"><select value={method} onChange={e=>setMethod(e.target.value)}>{['Transferencia Bs.','Pago Móvil','Zelle USD','Efectivo USD'].map(m=><option key={m}>{m}</option>)}</select></Field><Field label="Monto aplicado a factura USD"><input type="number" min="0.01" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}/></Field><Field label="Referencia comprobante"><input value={reference} onChange={e=>setReference(e.target.value)} placeholder="N° transferencia / comprobante"/></Field><div className="notice full">Equivalente: {ves(Number(amount)*f.rate)} a {f.rate} Bs./USD<br/>IGTF: {usd(method==='Zelle USD'||method==='Efectivo USD'?Number(amount)*.03:0)} · Cobro adicional al monto aplicado.</div></>:mode==='receive'?<><Field label="Cantidad recibida"><input type="number" min="1" max={Number(row?.quantity)-Number(row?.received)} value={qty} onChange={e=>setQty(e.target.value)}/></Field><div className="notice">Pendiente: {Number(row?.quantity)-Number(row?.received)} · El inventario se incrementará al confirmar.</div></>:mode==='quality'?<><Field label="Medición dimensional / tolerancia (mm)"><input value={quality} onChange={e=>setQuality(e.target.value)} placeholder="Ø 45,000 / tolerancia ±0,020"/></Field><Field label="Firma responsable"><select value={operator} onChange={e=>setOperator(e.target.value)}>{f.data.personal.map(p=><option key={p.id}>{p.name}</option>)}</select></Field><div className="notice full">Al firmar la conformidad se marca la OT terminada. Registrar medición en milímetros (0,001 mm = 1 µm).</div></>:<>
- {module==='inventario'&&mode==='create'&&<><Field label="Nombre del material / aleación" full><input placeholder="Ej. Bronce Fosfórico SAE 660 Barra Redonda" value={name} onChange={e=>setName(e.target.value)}/></Field><Field label="Unidad de medida"><select value={unit} onChange={e=>setUnit(e.target.value)}><option value="kg">Kilogramos (kg)</option><option value="barra">Barras</option><option value="plancha">Planchas</option><option value="unid">Unidades</option><option value="m">Metros (m)</option></select></Field><Field label="Ubicación en almacén"><input placeholder="Ej. Estante 2-B, Almacén Central" value={location} onChange={e=>setLocation(e.target.value)}/></Field><Field label="Stock inicial"><input type="number" min="0" step="0.1" value={qty} onChange={e=>setQty(e.target.value)}/></Field><Field label="Stock mínimo de alerta"><input type="number" min="0" step="0.1" value={minStock} onChange={e=>setMinStock(e.target.value)}/></Field><Field label="Costo unitario de compra (USD)"><input type="number" min="0.01" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}/></Field></>}
- {module==='taller'&&mode==='create'&&<><Field label="Nombre del equipo / máquina" full><input placeholder="Ej. Torno CNC Doosan Puma 2600" value={name} onChange={e=>setName(e.target.value)}/></Field><Field label="Tipo / Proceso técnico"><input placeholder="Ej. Tornería CNC de precisión 4 ejes" value={standard} onChange={e=>setStandard(e.target.value)}/></Field><Field label="Capacidad mensual (Horas)"><input type="number" min="1" value={capacity} onChange={e=>setCapacity(e.target.value)}/></Field><Field label="Tarifa / Costo por hora (USD)"><input type="number" min="1" step="0.5" value={amount} onChange={e=>setAmount(e.target.value)}/></Field><Field label="Próximo mantenimiento preventivo"><input type="date" value={maintenance} onChange={e=>setMaintenance(e.target.value)}/></Field></>}
- {['clientes','personal','gastos','compras'].includes(module)&&mode==='create'&&<Field label={module==='gastos'?'Categoría':module==='compras'?'Proveedor':'Nombre / razón social'}>{module==='gastos'?<select value={name} onChange={e=>setName(e.target.value)}>{f.data.gastos.map(g=><option key={g.id}>{g.name}</option>)}</select>:module==='compras'?<select value={name} onChange={e=>setName(e.target.value)}>{f.data.compras.map(g=><option key={g.id}>{g.name}</option>)}</select>:<input value={name} onChange={e=>setName(e.target.value)}/>}</Field>}
- {!['personal','gastos','clientes','compras','inventario','taller'].includes(module)&&mode!=='work'&&<Field label="Cliente industrial"><select value={client} onChange={e=>setClient(e.target.value)}>{f.data.clientes.map(c=><option key={c.id}>{c.name}</option>)}</select></Field>}
- {mode!=='work'&&module!=='inventario'&&module!=='taller'&&<Field label={module==='personal'?'Especialidad técnica':'Descripción / alcance del trabajo'} full><textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Descripción técnica, dimensiones y alcance..."/></Field>}
- {['cotizaciones','compras','ordenes'].includes(module)&&mode!=='work'&&<><Field label="Material de inventario"><select value={material} onChange={e=>setMaterial(e.target.value)}>{f.data.inventario.map(m=><option value={m.id} key={m.id}>{m.name} · {usd(Number(m.cost))}/{m.unit}</option>)}</select></Field><Field label="Cantidad de material / unidades"><input type="number" min="1" value={qty} onChange={e=>setQty(e.target.value)}/></Field></>}
- {(isQuote||mode==='work'||module==='ordenes')&&<><Field label="Máquina asignada"><select value={machine} onChange={e=>setMachine(e.target.value)}>{f.data.taller.map(m=><option value={m.id} key={m.id}>{m.id} · {m.name}</option>)}</select></Field><Field label="Operario asignado"><select value={operator} onChange={e=>setOperator(e.target.value)}>{f.data.personal.map(m=><option key={m.id}>{m.name}</option>)}</select></Field><Field label="Horas de máquina"><input type="number" min="0" value={machineHours} onChange={e=>setMachineHours(e.target.value)}/></Field><Field label="Horas de operario"><input type="number" min="0" value={laborHours} onChange={e=>setLaborHours(e.target.value)}/></Field></>}
- {isQuote?<Field label="Precio unitario de venta USD"><input type="number" step="0.01" min="0.01" value={price} onChange={e=>setPrice(e.target.value)}/></Field>:mode!=='work'&&module!=='inventario'&&module!=='taller'&&<Field label={module==='facturacion'?'Base imponible USD (sin IVA)':module==='clientes'?'Límite de crédito USD':module==='personal'?'Costo por hora USD':'Importe USD'}><input type="number" min="0" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}/></Field>}
- {module==='clientes'&&<><Field label="RIF comprador"><input value={rif} onChange={e=>setRif(e.target.value)}/></Field><Field label="WhatsApp (código país)"><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="58..."/></Field></>}
- {module==='gastos'&&<><Field label="Presupuesto USD"><input type="number" min="0" value={budget} onChange={e=>setBudget(e.target.value)}/></Field><Field label="Referencia comprobante"><input value={reference} onChange={e=>setReference(e.target.value)}/></Field><Field label="Recurrencia"><select value={recurring?'si':'no'} onChange={e=>setRecurring(e.target.value==='si')}><option value="si">Recurrente</option><option value="no">No recurrente</option></select></Field></>}
- {module==='ordenes'&&<Field label="Prioridad"><select value={priority} onChange={e=>setPriority(e.target.value)}>{['Emergencia 24-48h','Prioritaria','Estándar'].map(p=><option key={p}>{p}</option>)}</select></Field>}
- </>}
- </div>{isQuote&&<><div className="cost-summary"><div><span className="field-label">Costo estimado USD</span><div className="value">{usd(calc.cost)}</div><span className="mono muted">{ves(calc.cost*f.rate)}</span></div><div><span className="field-label">Precio total USD</span><div className="value">{usd(calc.total)}</div><span className="mono muted">{ves(calc.total*f.rate)}</span></div><div><span className="field-label">Utilidad bruta</span><div className="value">{usd(calc.profit)}</div><span className="mono muted">{ves(calc.profit*f.rate)}</span></div></div><div className={`margin-badge ${calc.margin>=35?'positive':calc.margin>=20?'warning':'negative'}`}><span>MARGEN BRUTO · {calc.margin>=35?'SALUDABLE':calc.margin>=20?'REVISAR PRECIO':'POR DEBAJO DE META'}</span><span>{calc.margin.toFixed(1)}%</span></div></>}{module==='facturacion'&&mode==='create'&&<div className="notice">IVA 16%: {usd(Number(amount)*.16)} · Total: {usd(Number(amount)*1.16)} / {ves(Number(amount)*1.16*f.rate)}<br/>Tasa congelada al emitir: {f.rate} Bs./USD</div>}</Modal>;
+
+function Aging() {
+  const f = useFamesa();
+  const ranges = [
+    { name: '0–30 DÍAS', min: 0, max: 30 },
+    { name: '31–60 DÍAS', min: 31, max: 60 },
+    { name: '61–90 DÍAS', min: 61, max: 90 },
+    { name: '+90 DÍAS', min: 91, max: 9999 },
+  ];
+  return (
+    <div className="aging-grid">
+      {ranges.map((range, i) => {
+        const amount = f.data.facturacion
+          .filter((r) => {
+            const days = Math.max(
+              0,
+              Math.floor((Date.now() - Date.parse(String(r.date))) / 86400000),
+            );
+            return days >= range.min && days <= range.max;
+          })
+          .reduce((s, r) => s + Number(r.amount) - Number(r.paid), 0);
+        return (
+          <div className="aging-item" key={range.name}>
+            <span className="eyebrow muted">{range.name}</span>
+            <strong className={i > 1 ? 'negative' : ''}>{usd(amount)}</strong>
+            {f.mirror && <span className="mono muted">{ves(amount * f.rate)}</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
-function sendWhatsApp(phone:string,text:string){const digits=phone.replace(/\D/g,'');if(digits.length<10){toast.error('Completa un teléfono WhatsApp real con código de país');return;}window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`,'_blank','noopener,noreferrer');}
-function nextId(prefix:string,rows:RecordData[],pad:number){const max=rows.reduce((m,r)=>{const n=Number(String(r.id).replace(/\D/g,''));return Number.isFinite(n)&&n>m?n:m;},0);return `${prefix}-${String(max+1).padStart(pad,'0')}`;}
+
+function Reports() {
+  const f = useFamesa();
+  const revenue = f.data.facturacion.reduce((s, r) => s + Number(r.base ?? 0), 0);
+  const cost = f.data.ordenes.reduce((s, r) => s + Number(r.cost ?? 0), 0);
+  const expenses = f.data.gastos.reduce((s, r) => s + Number(r.amount), 0);
+  const net = revenue - cost - expenses;
+  const cashflow = buildCashflow(revenue, expenses);
+  return (
+    <>
+      <div className="module-stats">
+        {[
+          ['Ingresos', revenue],
+          ['Utilidad bruta', revenue - cost],
+          ['Utilidad neta', net],
+          ['Margen neto', revenue ? (net / revenue) * 100 : 0],
+        ].map(([label, value], i) => (
+          <div className="module-stat" key={String(label)}>
+            <span className="eyebrow muted">{label}</span>
+            <div className={`value ${Number(value) < 0 ? 'negative' : 'positive'}`}>
+              {i === 3 ? Number(value).toFixed(1) + '%' : usd(Number(value))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="report-layout">
+        <section className="panel">
+          <div className="panel-header">
+            <h2>Estado de resultados · Octubre 2026</h2>
+          </div>
+          {[
+            ['Ventas netas', revenue],
+            ['Costo directo de producción', -cost],
+            ['Utilidad bruta', revenue - cost],
+            ['Gastos operativos', -expenses],
+            ['Resultado neto', net],
+          ].map(([name, amount], i) => (
+            <div className={`pnl-row ${i === 4 ? 'total' : ''}`} key={String(name)}>
+              <span>{name}</span>
+              <span>{usd(Number(amount))}</span>
+            </div>
+          ))}
+        </section>
+        <section className="panel">
+          <div className="panel-header">
+            <h2>Flujo de caja · Ingresos / egresos</h2>
+          </div>
+          <div className="chart-wrap">
+            <CashChart data={cashflow} />
+          </div>
+        </section>
+      </div>
+      <h2 className="detail-section">Rentabilidad por orden de trabajo</h2>
+      <div className="panel table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>OT / servicio</th>
+              <th>Cliente</th>
+              <th>Venta</th>
+              <th>Costo estimado / real</th>
+              <th>Margen</th>
+              <th>Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {f.data.ordenes.map((r) => (
+              <tr key={r.id}>
+                <td>
+                  <span className="mono">{r.id}</span>
+                  <div className="cell-sub">{r.description}</div>
+                </td>
+                <td>{r.client}</td>
+                <td>
+                  <Money amount={Number(r.amount)} />
+                </td>
+                <td>
+                  {usd(Number(r.estimated))} / {usd(Number(r.cost))}
+                </td>
+                <td>
+                  {(Number(r.amount) > 0
+                    ? (1 - Number(r.cost) / Number(r.amount)) * 100
+                    : 0
+                  ).toFixed(1)}
+                  %
+                </td>
+                <td>
+                  <span
+                    className={
+                      Number(r.cost) > Number(r.estimated) ? 'negative' : 'positive'
+                    }
+                  >
+                    {Number(r.cost) > Number(r.estimated) ? 'SOBRECOSTO' : 'EN PRESUPUESTO'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <h2 className="detail-section">Margen por cliente y servicio</h2>
+      <div className="panel table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Servicio</th>
+              <th>Venta USD</th>
+              <th>Utilidad bruta</th>
+              <th>Margen %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {f.data.clientes.map((c) => {
+              const orders = f.data.ordenes.filter((o) => o.client === c.name);
+              const sales = orders.reduce((s, r) => s + Number(r.amount), 0);
+              const profit = orders.reduce(
+                (s, r) => s + Number(r.amount) - Number(r.cost),
+                0,
+              );
+              return (
+                <tr key={c.id}>
+                  <td>{c.name}</td>
+                  <td>{orders[0]?.description ?? 'Sin producción'}</td>
+                  <td>{usd(sales)}</td>
+                  <td>{usd(profit)}</td>
+                  <td>{sales ? ((profit / sales) * 100).toFixed(1) : 0}%</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="notice">
+        Serie histórica ilustrativa de flujo de caja. Estado de resultados y rentabilidad
+        calculados desde los registros de esta sesión.
+      </div>
+    </>
+  );
+}
+
+function Settings() {
+  const f = useFamesa();
+  const companyRow = f.data.ajustes[0];
+  const [rate, setRate] = useState(String(f.rate));
+  const [name, setName] = useState(String(companyRow?.name || 'FAMESA C.A.'));
+  const [rif, setRif] = useState(String(companyRow?.rif || 'J-31352388-7'));
+  const [address, setAddress] = useState(
+    String(companyRow?.address || 'Santa Rosa, Valencia, Carabobo, Venezuela'),
+  );
+  const [registry, setRegistry] = useState(
+    String(companyRow?.description || 'Primero N° 71, Tomo 44-A'),
+  );
+
+  useEffect(() => {
+    if (companyRow) {
+      if (companyRow.name) setName(String(companyRow.name));
+      if (companyRow.rif) setRif(String(companyRow.rif));
+      if (companyRow.address) setAddress(String(companyRow.address));
+      if (companyRow.description) setRegistry(String(companyRow.description));
+    }
+  }, [companyRow]);
+
+  useEffect(() => {
+    setRate(String(f.rate));
+  }, [f.rate]);
+
+  return (
+    <>
+      <section className="settings-section">
+        <h2>Identidad fiscal y planta</h2>
+        <div className="form-grid settings-fields">
+          <Field label="Razón social">
+            <input value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <Field label="RIF">
+            <input value={rif} onChange={(e) => setRif(e.target.value)} />
+          </Field>
+          <Field label="Dirección fiscal">
+            <input value={address} onChange={(e) => setAddress(e.target.value)} />
+          </Field>
+          <Field label="Registro mercantil">
+            <input value={registry} onChange={(e) => setRegistry(e.target.value)} />
+          </Field>
+          <Field label="Superficie de planta">
+            <input defaultValue="600 m²" />
+          </Field>
+          <Field label="Actividad económica">
+            <input defaultValue="Metalmecánica · Mecanizado CNC" />
+          </Field>
+        </div>
+        <Button
+          className="mt-5"
+          onClick={() => {
+            f.add('ajustes', {
+              id: 'SET-001',
+              name,
+              rif,
+              address,
+              registry,
+              description: registry,
+              status: 'actualizado',
+            });
+          }}
+        >
+          <Save /> GUARDAR DATOS FISCALES
+        </Button>
+      </section>
+      <section className="settings-section">
+        <h2>Motor de moneda dual</h2>
+        <div className="form-grid settings-fields">
+          <Field label="Tasa USD → VES">
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+            />
+          </Field>
+          <Field label="Visualización">
+            <select
+              value={f.mirror ? 'dual' : 'usd'}
+              onChange={(e) => f.setMirror(e.target.value === 'dual')}
+            >
+              <option value="dual">USD + Bs. espejo</option>
+              <option value="usd">Solo USD</option>
+            </select>
+          </Field>
+        </div>
+        <Button onClick={() => f.setRate(Number(rate))} className="mt-5">
+          <Save /> ACTUALIZAR TASA
+        </Button>
+        <div className="notice">
+          Las facturas emitidas conservan la tasa histórica. IVA 16%. IGTF 3% sobre pagos
+          recibidos en Efectivo USD o Zelle.
+        </div>
+      </section>
+      <section className="settings-section">
+        <h2>Numeración de documentos</h2>
+        <div className="form-grid settings-fields">
+          {[
+            ['Cotizaciones emitidas', f.data.cotizaciones.length],
+            ['Órdenes de trabajo', f.data.ordenes.length],
+            ['Facturas fiscales', f.data.facturacion.length],
+            ['Comprobantes de pago', f.data.cobros.length],
+          ].map(([n, v]) => (
+            <Field key={n} label={String(n)}>
+              <input value={v} readOnly />
+            </Field>
+          ))}
+        </div>
+      </section>
+      <section className="settings-section">
+        <h2>Sincronización con Turso (libSQL) & Sesión</h2>
+        <div className="notice warning-notice">
+          El selector de rol en la barra lateral permite probar en vivo las restricciones de
+          acceso por perfil (admin, gerente, ventas, taller, almacén, contabilidad).
+        </div>
+        <div className="flex gap-3 flex-wrap">
+          <Button variant="outline" disabled={f.cloudBusy} onClick={() => void f.saveCloud()}>
+            GUARDAR INSTANTÁNEA
+          </Button>
+          <Button variant="outline" disabled={f.cloudBusy} onClick={() => void f.loadCloud()}>
+            RECUPERAR INSTANTÁNEA
+          </Button>
+        </div>
+        <p className="muted text-xs mt-4">
+          Usuario activo: {f.userEmail} · Base de datos: Turso (famesa)
+        </p>
+      </section>
+      <section className="settings-section">
+        <h2>Matriz de roles · Simulación</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Módulo</th>
+                {Object.keys(roles).map((r) => (
+                  <th key={r}>{r}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(moduleInfo).map((m) => (
+                <tr key={m}>
+                  <td>{moduleInfo[m as ModuleKey].title}</td>
+                  {Object.keys(roles).map((r) => (
+                    <td
+                      key={r}
+                      className={canAccess(r as keyof typeof roles, m) ? 'positive' : 'muted'}
+                    >
+                      {canAccess(r as keyof typeof roles, m) ? '✓' : '—'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="settings-section">
+        <h2>Bitácora de auditoría</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha / hora</th>
+              <th>Acción</th>
+              <th>Rol</th>
+            </tr>
+          </thead>
+          <tbody>
+            {f.audits.map((a, i) => (
+              <tr key={i}>
+                <td className="mono">{a.time}</td>
+                <td>{a.action}</td>
+                <td>{a.role}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!f.audits.length && (
+          <div className="empty-state">Las acciones de esta sesión se registrarán aquí.</div>
+        )}
+      </section>
+    </>
+  );
+}
+
+export function RecordDialog({
+  state,
+  onClose,
+  onChange,
+}: {
+  state: DialogState;
+  onClose: () => void;
+  onChange: (s: DialogState) => void;
+}) {
+  const f = useFamesa();
+  const { module, mode } = state;
+  const row = state.row
+    ? f.data[module === 'cobros' ? 'facturacion' : module].find((r) => r.id === state.row?.id) ??
+      state.row
+    : undefined;
+
+  const defaultMat = f.data.inventario[0]?.id ?? 'MAT-1045-50';
+  const defaultMachine = f.data.taller[0]?.id ?? 'CNC-01';
+  const defaultOperator = f.data.personal[0]?.name ?? 'T.S.U. Carlos Méndez';
+
+  const initialName =
+    row?.name !== undefined
+      ? String(row.name)
+      : module === 'gastos'
+        ? EXPENSE_CATEGORIES[0]!
+        : module === 'compras'
+          ? DEFAULT_SUPPLIERS[0]!
+          : '';
+
+  const initialAmount =
+    mode === 'payment'
+      ? String(row ? Number(row.amount) - Number(row.paid) : 0)
+      : module === 'clientes'
+        ? String(row?.credit ?? row?.amount ?? 1000)
+        : module === 'inventario' || module === 'taller' || module === 'personal'
+          ? String(row?.cost ?? row?.amount ?? 25)
+          : String(row?.amount ?? 1000);
+
+  const initialQty =
+    mode === 'receive'
+      ? String(Math.max(1, Number(row?.quantity ?? 1) - Number(row?.received ?? 0)))
+      : module === 'inventario' && mode === 'create'
+        ? String(row?.stock ?? row?.quantity ?? 10)
+        : String(row?.quantity ?? row?.materialQty ?? 1);
+
+  const [name, setName] = useState(initialName);
+  const [client, setClient] = useState(
+    String(row?.client ?? f.data.clientes[0]?.name ?? ''),
+  );
+  const [description, setDescription] = useState(
+    String(row?.description ?? row?.sector ?? ''),
+  );
+  const [amount, setAmount] = useState(initialAmount);
+  const [qty, setQty] = useState(initialQty);
+  const [material, setMaterial] = useState(
+    String((module === 'inventario' ? row?.id : row?.material) ?? defaultMat),
+  );
+  const [machine, setMachine] = useState(
+    String((module === 'taller' ? row?.id : row?.machine) ?? defaultMachine),
+  );
+  const [operator, setOperator] = useState(String(row?.operator ?? defaultOperator));
+  const [machineHours, setMachineHours] = useState(String(row?.machineHours ?? 12));
+  const [laborHours, setLaborHours] = useState(String(row?.laborHours ?? 14));
+  const [price, setPrice] = useState(
+    String(Number(row?.amount ?? 4850) / Math.max(1, Number(row?.quantity ?? 1))),
+  );
+  const [method, setMethod] = useState('Transferencia Bs.');
+  const [moveType, setMoveType] = useState('Entrada');
+  const [reference, setReference] = useState(String(row?.voucher ?? row?.reference ?? ''));
+  const [invoiceId, setInvoiceId] = useState(
+    String(
+      row?.id ?? f.data.facturacion.find((r) => Number(r.amount) > Number(r.paid))?.id ?? '',
+    ),
+  );
+  const [status, setStatus] = useState(row?.status ?? 'pendiente');
+  const [quality, setQuality] = useState('');
+  const [phone, setPhone] = useState(String(row?.phone ?? ''));
+  const [rif, setRif] = useState(String(row?.rif ?? ''));
+  const [address, setAddress] = useState(String(row?.address ?? 'Santa Rosa, Valencia, Carabobo'));
+  const [contact, setContact] = useState(String(row?.contact ?? ''));
+  const [days, setDays] = useState(String(row?.days ?? 30));
+  const [segment, setSegment] = useState(String(row?.segment ?? 'Industrial'));
+  const [certification, setCertification] = useState(
+    String(row?.certification ?? 'Especialista Técnico CNC'),
+  );
+  const [budget, setBudget] = useState(String(row?.budget ?? 1000));
+  const [recurring, setRecurring] = useState(Boolean(row?.recurring));
+  const [priority, setPriority] = useState(String(row?.priority ?? 'Estándar'));
+  const [unit, setUnit] = useState(String(row?.unit ?? 'kg'));
+  const [location, setLocation] = useState(String(row?.location ?? 'Patio Barras'));
+  const [minStock, setMinStock] = useState(String(row?.min ?? 10));
+  const [standard, setStandard] = useState(String(row?.standard ?? 'Torno CNC'));
+  const [capacity, setCapacity] = useState(String(row?.capacity ?? 176));
+  const [maintenance, setMaintenance] = useState(
+    String(row?.maintenance ?? new Date().toISOString().slice(0, 10)),
+  );
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const selectedMaterial =
+    f.data.inventario.find((r) => r.id === material) ?? f.data.inventario[0];
+  const selectedMachine = f.data.taller.find((r) => r.id === machine) ?? f.data.taller[0];
+  const selectedOperator =
+    f.data.personal.find((r) => r.name === operator) ?? f.data.personal[0];
+  const calc = quoteTotals(
+    Number(qty),
+    Number(selectedMaterial?.cost ?? 0),
+    Number(machineHours),
+    Number(selectedMachine?.cost ?? 28),
+    Number(laborHours),
+    Number(selectedOperator?.cost ?? 8.5),
+    Number(price),
+  );
+
+  const supplierOptions = Array.from(
+    new Set([...DEFAULT_SUPPLIERS, ...f.data.compras.map((c) => String(c.name ?? '')).filter(Boolean)]),
+  );
+
+  const action = () => {
+    if (mode === 'create' && module === 'inventario') {
+      if (!name) {
+        toast.error('Ingresa el nombre o especificación del material');
+        return;
+      }
+      const id = row?.id ?? nextSeqId('MAT', f.data.inventario, 3);
+      const record: RecordData = {
+        id,
+        name,
+        status: Number(qty) < Number(minStock) ? 'crítico' : 'disponible',
+        stock: Number(qty),
+        min: Number(minStock),
+        unit,
+        cost: Number(amount),
+        location,
+        kardex:
+          row?.kardex ??
+          `Inventario inicial: ${qty} ${unit} registrado el ${new Date().toLocaleDateString('es-VE')}`,
+      };
+      if (row) f.update('inventario', row.id, record);
+      else f.add('inventario', record);
+      onClose();
+      return;
+    }
+
+    if (mode === 'create' && module === 'taller') {
+      if (!name) {
+        toast.error('Ingresa el nombre de la máquina');
+        return;
+      }
+      const id = row?.id ?? nextSeqId('MCH', f.data.taller, 2);
+      const record: RecordData = {
+        id,
+        name,
+        status: row?.status ?? 'operativa',
+        hours: Number(row?.hours ?? 0),
+        capacity: Number(capacity),
+        ot: row?.ot ?? '—',
+        maintenance,
+        cost: Number(amount),
+        standard,
+      };
+      if (row) f.update('taller', row.id, record);
+      else f.add('taller', record);
+      onClose();
+      return;
+    }
+
+    if (mode === 'stock') {
+      const id = selectedMaterial?.id ?? '';
+      if (!reference) {
+        toast.error('Indica la referencia del movimiento');
+        return;
+      }
+      f.moveStock(id, Number(qty), moveType, reference);
+      if (
+        Number(qty) > 0 &&
+        (moveType === 'Entrada' ||
+          moveType === 'Ajuste positivo' ||
+          Number(selectedMaterial?.stock) >= Number(qty))
+      ) {
+        onClose();
+      }
+      return;
+    }
+
+    if (mode === 'payment') {
+      const target = f.data.facturacion.find((r) => r.id === invoiceId);
+      if (
+        !target ||
+        Number(amount) <= 0 ||
+        Number(amount) > Number(target.amount) - Number(target.paid)
+      ) {
+        toast.error('Revisa el importe y el saldo de la factura');
+        return;
+      }
+      f.payment(invoiceId, Number(amount), method, reference);
+      onClose();
+      return;
+    }
+
+    if (mode === 'receive') {
+      if (
+        !row ||
+        Number(qty) <= 0 ||
+        Number(qty) > Number(row.quantity) - Number(row.received)
+      ) {
+        toast.error('Revisa la cantidad pendiente');
+        return;
+      }
+      f.receive(row.id, Number(qty));
+      onClose();
+      return;
+    }
+
+    if (mode === 'quality') {
+      if (!row || !quality) {
+        toast.error('Registra el resultado dimensional y firma');
+        return;
+      }
+      f.update('ordenes', row.id, {
+        quality: `${quality} mm · Conforme · ${operator}`,
+        status: 'terminada',
+        progress: 100,
+      });
+      onClose();
+      return;
+    }
+
+    if (mode === 'work') {
+      if (!row || Number(laborHours) <= 0) {
+        toast.error('Indica horas válidas');
+        return;
+      }
+      f.update('ordenes', row.id, {
+        machine,
+        operator,
+        hours: Number(row.hours ?? 0) + Number(laborHours),
+        cost:
+          Number(row.cost ?? 0) +
+          Number(laborHours) * Number(selectedOperator?.cost ?? 8.5) +
+          Number(machineHours) * Number(selectedMachine?.cost ?? 28),
+        work_logs: `${row.work_logs ?? ''}\n${operator} · ${laborHours} h operario / ${machineHours} h ${machine}`,
+        status: 'en_proceso',
+        progress: Math.min(85, Number(row.progress ?? 0) + 15),
+      });
+      onClose();
+      return;
+    }
+
+    if (!description && module !== 'clientes' && module !== 'personal' && module !== 'taller') {
+      toast.error('Describe el trabajo o el registro');
+      return;
+    }
+    if (['clientes', 'personal'].includes(module) && !name) {
+      toast.error('Indica un nombre');
+      return;
+    }
+    if (
+      module === 'cotizaciones' &&
+      (Number(qty) <= 0 ||
+        Number(price) <= 0 ||
+        Number(machineHours) < 0 ||
+        Number(laborHours) < 0)
+    ) {
+      toast.error('Revisa las cantidades y costos');
+      return;
+    }
+    if (module === 'facturacion' && Number(amount) <= 0) {
+      toast.error('El importe debe ser mayor que cero');
+      return;
+    }
+
+    const prefixes: Record<string, string> = {
+      leads: 'RFQ',
+      cotizaciones: 'COT',
+      ordenes: 'OT',
+      clientes: 'CLI',
+      compras: 'COM',
+      facturacion: 'FAC',
+      gastos: 'GAS',
+      personal: 'PER',
+      taller: 'MCH',
+      inventario: 'MAT',
+    };
+    const id = row?.id ?? nextSeqId(prefixes[module] ?? 'REG', f.data[module], 5);
+    const resolvedClient = client || name || 'Cliente Industrial';
+
+    let record: RecordData = {
+      id,
+      name: name || undefined,
+      client: resolvedClient,
+      description,
+      status:
+        row?.status ??
+        (module === 'cotizaciones'
+          ? 'borrador'
+          : module === 'leads'
+            ? 'nuevo'
+            : module === 'compras'
+              ? 'emitida'
+              : ['clientes', 'personal'].includes(module)
+                ? 'activo'
+                : 'pendiente'),
+      amount: Number(amount),
+      cost: 0,
+      exchange_rate: f.rate,
+      amount_ves: Number(amount) * f.rate,
+      date: row?.date ?? new Date().toISOString().slice(0, 10),
+      priority,
+    };
+
+    if (module === 'cotizaciones') {
+      record = {
+        ...record,
+        amount: calc.total,
+        cost: calc.cost,
+        amount_ves: calc.total * f.rate,
+        material: selectedMaterial?.id ?? material,
+        quantity: Number(qty),
+        machineHours: Number(machineHours),
+        laborHours: Number(laborHours),
+        machine: selectedMachine?.id ?? machine,
+        operator: selectedOperator?.name ?? operator,
+      };
+    }
+
+    if (module === 'facturacion') {
+      const totals = invoiceTotals(Number(amount), f.rate);
+      const c = f.data.clientes.find((c) => c.name === resolvedClient);
+      record = {
+        ...record,
+        ...totals,
+        amount: totals.total,
+        control:
+          row?.control ??
+          `00-${String(1000 + f.data.facturacion.length + 1).padStart(6, '0')}`,
+        paid: Number(row?.paid ?? 0),
+        rif: c?.rif || rif || 'J-00000000-0',
+        address: c?.address || address || 'Valencia, Edo. Carabobo',
+        due: row?.due ?? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+      };
+    }
+
+    if (module === 'clientes') {
+      record = {
+        ...record,
+        rif: rif || 'Por completar',
+        phone,
+        credit: Number(amount),
+        days: Number(days) || 30,
+        sector: description || 'Industrial',
+        segment: segment || 'Industrial',
+        address: address || 'Por completar',
+        contact: contact || 'Por completar',
+        interaction: row?.interaction ?? '',
+      };
+    }
+
+    if (module === 'personal') {
+      record = {
+        ...record,
+        cost: Number(amount),
+        hours: Number(row?.hours ?? 0),
+        certification: certification || 'Especialista Técnico CNC',
+      };
+    }
+
+    if (module === 'gastos') {
+      record = {
+        ...record,
+        name: name || 'Servicios',
+        voucher: reference,
+        recurring,
+        budget: Number(budget),
+        status: 'registrado',
+      };
+    }
+
+    if (module === 'compras') {
+      record = {
+        ...record,
+        name: name || DEFAULT_SUPPLIERS[0],
+        material: selectedMaterial?.id ?? material,
+        quantity: Number(qty),
+        received: Number(row?.received ?? 0),
+        cost: Number(amount),
+      };
+    }
+
+    if (module === 'ordenes') {
+      record = {
+        ...record,
+        machine: selectedMachine?.id ?? machine,
+        operator: selectedOperator?.name ?? operator,
+        material: selectedMaterial?.id ?? material,
+        materialQty: Number(qty),
+        reserved: Boolean(row?.reserved),
+        estimated: Number(row?.estimated ?? Number(amount) * 0.6),
+        cost: Number(row?.cost ?? 0),
+        hours: Number(row?.hours ?? 0),
+        progress: Number(row?.progress ?? 0),
+        quality: row?.quality ?? '',
+        due: row?.due ?? new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+      };
+    }
+
+    if (module === 'leads') {
+      record = {
+        ...record,
+        name: contact || resolvedClient,
+        rif,
+        phone,
+        consent: row?.consent ?? `${new Date().toISOString().slice(0, 16)} · Ley 17.1-2023`,
+      };
+    }
+
+    if (row && mode === 'create') f.update(module, row.id, { ...record, id: row.id });
+    else f.add(module, record);
+    onClose();
+  };
+
+  const printDocument = (record: RecordData) => onChange({ module, row: record, mode: 'print' });
+
+  if (mode === 'print' && row) {
+    return (
+      <Modal
+        wide
+        title={
+          module === 'cotizaciones'
+            ? 'Vista previa de cotización'
+            : 'Documento fiscal · Vista previa'
+        }
+        onClose={onClose}
+        footer={
+          <>
+            <Button variant="outline" onClick={onClose}>
+              CERRAR
+            </Button>
+            <Button onClick={() => window.print()}>
+              <Printer /> IMPRIMIR / GUARDAR PDF
+            </Button>
+          </>
+        }
+      >
+        <div className="document">
+          <div className="document-brand">
+            <div>
+              <h2>FAMESA C.A.</h2>
+              <p>
+                RIF J-31352388-7
+                <br />
+                Santa Rosa, Valencia, Carabobo · Venezuela
+                <br />
+                Reg. Mercantil Primero N° 71, Tomo 44-A
+              </p>
+            </div>
+            <div className="mono">
+              METALMECÁNICA DE PRECISIÓN
+              <br />
+              CNC · ASME / AWS
+              <br />
+              FECHA: {row.date}
+            </div>
+          </div>
+          <div className="document-title">
+            <h3>{module === 'cotizaciones' ? 'COTIZACIÓN COMERCIAL' : 'FACTURA FISCAL'}</h3>
+            <strong className="mono">{row.id}</strong>
+          </div>
+          <div className="detail-grid">
+            <div>
+              <span className="field-label">Razón social / comprador</span>
+              <p>
+                <strong>{row.client}</strong>
+              </p>
+              <p className="muted">
+                RIF: {row.rif ?? f.data.clientes.find((c) => c.name === row.client)?.rif}
+                <br />
+                Dirección:{' '}
+                {row.address ?? f.data.clientes.find((c) => c.name === row.client)?.address}
+              </p>
+            </div>
+            <div>
+              <p>
+                Control fiscal: <strong className="mono">{row.control ?? 'No aplica'}</strong>
+              </p>
+              <p>
+                Tasa congelada: <strong>{row.exchange_rate} Bs./USD</strong>
+              </p>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Total USD</th>
+                <th>Total Bs.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{row.description}</td>
+                <td>{row.quantity ?? 1}</td>
+                <td>{usd(Number(row.base ?? row.amount))}</td>
+                <td>{ves(Number(row.base ?? row.amount) * Number(row.exchange_rate))}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="document-totals">
+            {(module === 'cotizaciones'
+              ? [
+                  ['Subtotal', row.amount],
+                  ['IVA 16% (referencial)', Number(row.amount) * 0.16],
+                  ['Total con IVA', Number(row.amount) * 1.16],
+                ]
+              : [
+                  ['Base imponible', row.base],
+                  ['IVA 16%', row.iva],
+                  ['IGTF registrado en pagos', row.igtf_collected ?? 0],
+                  ['TOTAL FACTURA', row.amount],
+                ]
+            ).map(([label, value], i) => (
+              <div
+                key={String(label)}
+                className={`document-total-row ${
+                  i === (module === 'cotizaciones' ? 2 : 3) ? 'final' : ''
+                }`}
+              >
+                <span>{label}</span>
+                <span>
+                  {usd(Number(value))}
+                  <small className="block text-xs muted">
+                    {ves(Number(value) * Number(row.exchange_rate))}
+                  </small>
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="muted text-xs mt-8">
+            {module === 'cotizaciones'
+              ? 'Validez: 15 días. Entrega y condiciones sujetas a aprobación técnica.'
+              : 'Documento de muestra. La emisión fiscal oficial y su numeración deben validarse con su asesor tributario.'}
+          </p>
+          <div className="document-total-row mt-8">
+            <span>ELABORADO POR __________________</span>
+            <span>RECIBIDO CONFORME __________________</span>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
+  if (mode === 'detail' && row) {
+    const related = ['cotizaciones', 'ordenes', 'facturacion'] as const;
+    return (
+      <>
+        <Modal
+          wide
+          title={`${row.id} · ${moduleInfo[module].title}`}
+          subtitle={String(row.name ?? row.client ?? row.description)}
+          onClose={onClose}
+          footer={
+            <>
+              {DELETABLE_MODULES.includes(module) && (
+                <Button
+                  variant="ghost"
+                  className="text-red-500 hover:text-red-400 hover:bg-red-500/10 mr-auto"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 size={16} /> ELIMINAR REGISTRO
+                </Button>
+              )}
+              <Button variant="outline" onClick={onClose}>
+                CERRAR
+              </Button>
+              {['cotizaciones', 'facturacion'].includes(module) && (
+                <Button variant="outline" onClick={() => printDocument(row)}>
+                  <Printer /> VER DOCUMENTO / PDF
+                </Button>
+              )}
+              {module === 'leads' && (
+                <Button
+                  variant="industrial"
+                  onClick={() => {
+                    f.convertLead(row.id);
+                    onClose();
+                  }}
+                >
+                  CONVERTIR A CLIENTE + COTIZACIÓN <ArrowRight />
+                </Button>
+              )}
+              {module === 'cotizaciones' && (
+                <Button
+                  variant="industrial"
+                  disabled={Boolean(row.ot)}
+                  onClick={() => {
+                    f.approveQuote(row.id);
+                    onClose();
+                  }}
+                >
+                  APROBAR Y CONVERTIR A OT <ArrowRight />
+                </Button>
+              )}
+              {module === 'ordenes' && (
+                <Button
+                  variant="industrial"
+                  onClick={() => {
+                    f.invoiceOrder(row.id);
+                  }}
+                >
+                  GENERAR FACTURA SENIAT
+                </Button>
+              )}
+              {module === 'compras' && (
+                <Button
+                  disabled={row.status === 'recibida'}
+                  onClick={() => onChange({ module, row, mode: 'receive' })}
+                >
+                  REGISTRAR RECEPCIÓN
+                </Button>
+              )}
+              {module === 'inventario' && (
+                <Button onClick={() => onChange({ module, row, mode: 'stock' })}>
+                  <Plus /> MOVIMIENTO
+                </Button>
+              )}
+              {module === 'cobros' && (
+                <Button
+                  variant="industrial"
+                  onClick={() => onChange({ module, row, mode: 'payment' })}
+                >
+                  REGISTRAR PAGO
+                </Button>
+              )}
+              {EDITABLE_MODULES.includes(module) && (
+                <Button
+                  variant="outline"
+                  onClick={() => onChange({ module, row, mode: 'create' })}
+                >
+                  EDITAR
+                </Button>
+              )}
+            </>
+          }
+        >
+          <div className="detail-grid">
+            {[
+              ['Estado', <Status key="det-status" status={row.status} />],
+              ['Descripción', row.description ?? row.name],
+              ['Cliente / cuenta', row.client ?? row.name],
+              [
+                'Valor USD',
+                <Money
+                  key="det-amount"
+                  amount={Number(row.amount ?? row.credit ?? row.cost ?? 0)}
+                  rate={module === 'facturacion' ? Number(row.exchange_rate) : undefined}
+                />,
+              ],
+            ].map(([label, val]) => (
+              <div className="detail-field" key={String(label)}>
+                <span className="field-label">{label}</span>
+                <strong>{val}</strong>
+              </div>
+            ))}
+          </div>
+
+          {module === 'leads' && (
+            <>
+              <h2 className="detail-section">Seguimiento RFQ</h2>
+              <Field label="Estado de oportunidad">
+                <select
+                  value={status}
+                  onChange={(e) => {
+                    setStatus(e.target.value);
+                    f.update(module, row.id, { status: e.target.value });
+                  }}
+                >
+                  {['nuevo', 'contactado', 'cotizado', 'ganado', 'perdido'].map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </Field>
+              <div className="notice">
+                Privacidad y consentimiento: {row.consent}
+                <br />
+                Prioridad: {row.priority}
+              </div>
+            </>
+          )}
+
+          {module === 'cotizaciones' && (
+            <>
+              <h2 className="detail-section">Costos y rentabilidad</h2>
+              <div className="cost-summary">
+                <div>
+                  <span className="field-label">Venta</span>
+                  <div className="value">{usd(Number(row.amount))}</div>
+                </div>
+                <div>
+                  <span className="field-label">Costo estimado</span>
+                  <div className="value">{usd(Number(row.cost))}</div>
+                </div>
+                <div>
+                  <span className="field-label">Margen bruto</span>
+                  <div className="value">
+                    {(Number(row.amount) > 0
+                      ? (1 - Number(row.cost) / Number(row.amount)) * 100
+                      : 0
+                    ).toFixed(1)}
+                    %
+                  </div>
+                </div>
+              </div>
+              <p className="muted text-xs mt-4">
+                Material:{' '}
+                {f.data.inventario.find((m) => m.id === row.material)?.name ?? 'Por definir'} ·
+                Cantidad {row.quantity} · Máquina {row.machineHours} h · Operario {row.laborHours} h
+              </p>
+              {row.ot && <div className="notice">Orden vinculada: {row.ot}</div>}
+            </>
+          )}
+
+          {module === 'ordenes' && (
+            <>
+              <h2 className="detail-section">Producción y control dimensional</h2>
+              <div className="form-grid">
+                <Field label="Estado de producción">
+                  <select
+                    value={status}
+                    onChange={(e) => {
+                      const s = e.target.value;
+                      if (s === 'terminada' && !row.quality) {
+                        toast.error('Firma el control de calidad antes de terminar');
+                        return;
+                      }
+                      setStatus(s);
+                      f.update(module, row.id, {
+                        status: s,
+                        progress: s === 'control_calidad' ? 90 : row.progress,
+                      });
+                    }}
+                  >
+                    {['pendiente', 'en_proceso', 'control_calidad', 'terminada', 'facturada'].map(
+                      (s) => (
+                        <option key={s}>{s}</option>
+                      ),
+                    )}
+                  </select>
+                </Field>
+                <Field label="Prioridad">
+                  <select
+                    value={priority}
+                    onChange={(e) => {
+                      setPriority(e.target.value);
+                      f.update(module, row.id, { priority: e.target.value });
+                    }}
+                  >
+                    {['Emergencia 24-48h', 'Prioritaria', 'Estándar'].map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <div className="detail-grid mt-5">
+                <div>
+                  Máquina: <strong>{row.machine}</strong>
+                  <br />
+                  Operario: {row.operator}
+                  <br />
+                  Horas: {row.hours}
+                </div>
+                <div>
+                  Estimado: {usd(Number(row.estimated))}
+                  <br />
+                  Real: {usd(Number(row.cost))}
+                  <br />
+                  Material:{' '}
+                  {row.reserved ? 'Reservado / descontado' : 'Pendiente de asignación'}
+                </div>
+              </div>
+              <div className="flex gap-3 mt-5 flex-wrap">
+                <Button variant="outline" onClick={() => onChange({ module, row, mode: 'work' })}>
+                  REGISTRAR HORAS
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => onChange({ module, row, mode: 'quality' })}
+                >
+                  <Check /> CONTROL DIMENSIONAL
+                </Button>
+              </div>
+              <h3 className="detail-section">Registro de trabajo</h3>
+              <div className="timeline">
+                {row.work_logs || 'Sin registros adicionales de trabajo'}
+              </div>
+              <h3 className="detail-section">Control de calidad</h3>
+              <div className="notice">{row.quality || 'Pendiente de firma dimensional'}</div>
+            </>
+          )}
+
+          {module === 'inventario' && (
+            <>
+              <div className="cost-summary">
+                <div>
+                  <span className="field-label">Existencia</span>
+                  <div className="value">
+                    {row.stock} {row.unit}
+                  </div>
+                </div>
+                <div>
+                  <span className="field-label">Mínimo</span>
+                  <div className="value">
+                    {row.min} {row.unit}
+                  </div>
+                </div>
+                <div>
+                  <span className="field-label">Costo promedio</span>
+                  <div className="value">{usd(Number(row.cost))}</div>
+                </div>
+              </div>
+              <h2 className="detail-section">Kardex · {row.location}</h2>
+              <div className="timeline">{row.kardex}</div>
+            </>
+          )}
+
+          {module === 'taller' && (
+            <>
+              <h2 className="detail-section">Disponibilidad de máquina</h2>
+              <div className="form-grid">
+                <Field label="Estado">
+                  <select
+                    value={status}
+                    onChange={(e) => {
+                      setStatus(e.target.value);
+                      f.update(module, row.id, { status: e.target.value });
+                    }}
+                  >
+                    {['operativa', 'ocupada', 'mantenimiento', 'parada'].map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Próximo mantenimiento">
+                  <input
+                    type="date"
+                    defaultValue={String(row.maintenance)}
+                    onChange={(e) => f.update(module, row.id, { maintenance: e.target.value })}
+                  />
+                </Field>
+                <Field label="Tipo de mantenimiento">
+                  <select
+                    defaultValue={String(row.maintenance_type ?? 'Preventivo')}
+                    onChange={(e) =>
+                      f.update(module, row.id, { maintenance_type: e.target.value })
+                    }
+                  >
+                    <option>Preventivo</option>
+                    <option>Correctivo</option>
+                  </select>
+                </Field>
+                <Field label="OT actual">
+                  <select
+                    defaultValue={String(row.ot)}
+                    onChange={(e) =>
+                      f.update(module, row.id, {
+                        ot: e.target.value,
+                        status: e.target.value === '—' ? 'operativa' : 'ocupada',
+                      })
+                    }
+                  >
+                    <option>—</option>
+                    {f.data.ordenes.map((o) => (
+                      <option key={o.id}>{o.id}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <div className="notice">
+                Uso acumulado: {row.hours} h · Capacidad mensual: {row.capacity} h · Tarifa:{' '}
+                {usd(Number(row.cost))}/h
+              </div>
+            </>
+          )}
+
+          {module === 'clientes' && (
+            <>
+              <h2 className="detail-section">Perfil de cuenta 360°</h2>
+              <div className="detail-grid">
+                <div>
+                  RIF: <strong>{row.rif}</strong>
+                  <br />
+                  Sector: {row.sector}
+                  <br />
+                  Dirección: {row.address}
+                </div>
+                <div>
+                  Contacto: <strong>{row.contact ?? 'Por completar'}</strong>
+                  <br />
+                  Crédito: {usd(Number(row.credit))} / {row.days ?? 30} días
+                </div>
+              </div>
+              <h3 className="detail-section">Historial de interacciones</h3>
+              <div className="timeline">
+                {row.interaction || 'Sin interacciones registradas'}
+              </div>
+              <div className="form-grid mt-5">
+                <Field label="Nueva interacción / visita / llamada">
+                  <input
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
+                    placeholder="Resumen de la visita técnica..."
+                  />
+                </Field>
+                <Field label="WhatsApp (código país y número)">
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="58..."
+                  />
+                </Field>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (!reference && !phone) {
+                      toast.error('Añade una interacción o teléfono');
+                      return;
+                    }
+                    const nextInteraction = reference
+                      ? `${row.interaction ? `${row.interaction}\n` : ''}${new Date().toLocaleDateString('es-VE')}: ${reference}`
+                      : String(row.interaction ?? '');
+                    f.update(module, row.id, {
+                      interaction: nextInteraction,
+                      phone,
+                    });
+                    setReference('');
+                  }}
+                >
+                  GUARDAR INTERACCIÓN
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    sendWhatsApp(
+                      phone,
+                      'Hola, le contactamos de FAMESA C.A. respecto a sus servicios industriales.',
+                    )
+                  }
+                >
+                  <Send /> WHATSAPP
+                </Button>
+              </div>
+              {related.map((m) => (
+                <div key={m}>
+                  <h3 className="detail-section">{moduleInfo[m].title}</h3>
+                  {f.data[m]
+                    .filter((r) => r.client === row.name)
+                    .map((r) => (
+                      <div key={r.id} className="pnl-row">
+                        <Button
+                          variant="link"
+                          onClick={() => onChange({ module: m, row: r, mode: 'detail' })}
+                        >
+                          {r.id}
+                        </Button>
+                        <Status status={r.status} />
+                        <Money amount={Number(r.amount)} />
+                      </div>
+                    ))}
+                </div>
+              ))}
+            </>
+          )}
+
+          {['facturacion', 'cobros'].includes(module) && (
+            <>
+              <div className="cost-summary">
+                <div>
+                  <span className="field-label">Base + IVA 16%</span>
+                  <div className="value">{usd(Number(row.amount))}</div>
+                </div>
+                <div>
+                  <span className="field-label">Pagado</span>
+                  <div className="value">{usd(Number(row.paid))}</div>
+                </div>
+                <div>
+                  <span className="field-label">Saldo</span>
+                  <div className="value">{usd(Number(row.amount) - Number(row.paid))}</div>
+                </div>
+              </div>
+              <div className="notice">
+                Tasa histórica: {row.exchange_rate} Bs./USD · Total congelado:{' '}
+                {ves(Number(row.amount_ves))}
+                <br />
+                RIF comprador: {row.rif} · Control: {row.control}
+                <br />
+                Base: {usd(Number(row.base))} · IVA: {usd(Number(row.iva))} · IGTF en pagos:{' '}
+                {usd(Number(row.igtf_collected ?? 0))}
+              </div>
+              <div className="form-grid">
+                <Field label="WhatsApp de cobranza">
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="58..."
+                  />
+                </Field>
+                <Field label="Monto nota de crédito USD">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <div className="flex gap-3 mt-4 flex-wrap">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    sendWhatsApp(
+                      phone,
+                      `Estimados ${row.client}, FAMESA C.A. les recuerda el saldo ${usd(
+                        Number(row.amount) - Number(row.paid),
+                      )} de la factura ${row.id}, vencimiento ${row.due}. Gracias.`,
+                    )
+                  }
+                >
+                  <Send /> RECORDATORIO WHATSAPP
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const n = Number(amount);
+                    if (n <= 0 || n > Number(row.amount) - Number(row.paid)) {
+                      toast.error('Nota debe ser positiva y no exceder saldo');
+                      return;
+                    }
+                    f.update('facturacion', row.id, {
+                      amount: Number(row.amount) - n,
+                      amount_ves: (Number(row.amount) - n) * Number(row.exchange_rate),
+                      credit_note: `NC-${row.id}`,
+                      credit_amount: n,
+                      status:
+                        Number(row.amount) - n <= Number(row.paid) ? 'pagada' : row.status,
+                    });
+                  }}
+                >
+                  EMITIR NOTA DE CRÉDITO
+                </Button>
+              </div>
+            </>
+          )}
+
+          {module === 'compras' && (
+            <div className="notice">
+              Ordenado: {row.quantity} · Recibido: {row.received} · Pendiente:{' '}
+              {Number(row.quantity) - Number(row.received)}
+              <br />
+              Presupuestado: {usd(Number(row.amount))} · Costo real: {usd(Number(row.cost))}
+            </div>
+          )}
+
+          {module === 'personal' && (
+            <>
+              <div className="notice">
+                Tarifa por hora: {usd(Number(row.cost))} · Horas registradas: {row.hours}
+                <br />
+                Certificación: {row.certification ?? 'Por completar'}
+              </div>
+              <h3 className="detail-section">Órdenes asignadas</h3>
+              {f.data.ordenes
+                .filter((o) => o.operator === row.name)
+                .map((o) => (
+                  <div className="pnl-row" key={o.id}>
+                    <span>
+                      {o.id} · {o.description}
+                    </span>
+                    <span>{o.hours} h</span>
+                  </div>
+                ))}
+            </>
+          )}
+        </Modal>
+
+        {confirmDelete && (
+          <Modal
+            title="Confirmar eliminación"
+            subtitle={`Esta acción eliminará el registro ${row.id} de manera irreversible.`}
+            onClose={() => setConfirmDelete(false)}
+            footer={
+              <>
+                <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+                  CANCELAR
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    f.deleteRecord(module, row.id);
+                    setConfirmDelete(false);
+                    onClose();
+                  }}
+                >
+                  <Trash2 size={16} /> ELIMINAR DEFINITIVAMENTE
+                </Button>
+              </>
+            }
+          >
+            <div className="p-4 bg-red-950/20 border border-red-500/30 rounded-lg text-sm text-red-200">
+              <p>
+                ¿Estás seguro de que deseas eliminar{' '}
+                <strong>{String(row.name ?? row.client ?? row.id)}</strong> ({row.id})?
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Si el elemento está asociado a órdenes o cotizaciones existentes, verifique
+                antes de proceder.
+              </p>
+            </div>
+          </Modal>
+        )}
+      </>
+    );
+  }
+
+  const isQuote = module === 'cotizaciones' && mode === 'create';
+  const title =
+    mode === 'stock'
+      ? 'Registrar movimiento de material'
+      : mode === 'payment'
+        ? 'Registrar pago y comprobante'
+        : mode === 'receive'
+          ? 'Recepción de compra'
+          : mode === 'work'
+            ? 'Registro de horas de trabajo'
+            : mode === 'quality'
+              ? 'Control dimensional y firma'
+              : `${row ? 'Editar' : 'Nuevo registro'} · ${moduleInfo[module].title}`;
+
+  return (
+    <Modal
+      title={title}
+      subtitle="FAMESA C.A. · Registro trazable de operación"
+      onClose={onClose}
+      wide={isQuote}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            CANCELAR
+          </Button>
+          <Button variant="industrial" onClick={action}>
+            <Save /> {row && mode === 'create' ? 'GUARDAR CAMBIOS' : isQuote ? 'GUARDAR COTIZACIÓN' : 'REGISTRAR'}
+          </Button>
+        </>
+      }
+    >
+      <div className="form-grid">
+        {mode === 'stock' ? (
+          <>
+            <Field label="Material">
+              <select value={material} onChange={(e) => setMaterial(e.target.value)}>
+                {f.data.inventario.map((m) => (
+                  <option value={m.id} key={m.id}>
+                    {m.name} · {m.stock} {m.unit}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Tipo de movimiento">
+              <select value={moveType} onChange={(e) => setMoveType(e.target.value)}>
+                {['Entrada', 'Salida a OT', 'Ajuste positivo', 'Ajuste negativo', 'Merma'].map(
+                  (t) => (
+                    <option key={t}>{t}</option>
+                  ),
+                )}
+              </select>
+            </Field>
+            <Field label="Cantidad">
+              <input
+                type="number"
+                min="0.01"
+                value={qty}
+                onChange={(e) => setQty(e.target.value)}
+              />
+            </Field>
+            <Field label="Referencia / OT / comprobante">
+              <input value={reference} onChange={(e) => setReference(e.target.value)} />
+            </Field>
+          </>
+        ) : mode === 'payment' ? (
+          <>
+            <Field label="Factura con saldo">
+              <select
+                value={invoiceId}
+                onChange={(e) => {
+                  setInvoiceId(e.target.value);
+                  const invoice = f.data.facturacion.find((r) => r.id === e.target.value);
+                  setAmount(String(Number(invoice?.amount) - Number(invoice?.paid)));
+                }}
+              >
+                {f.data.facturacion
+                  .filter((r) => Number(r.amount) > Number(r.paid))
+                  .map((r) => (
+                    <option value={r.id} key={r.id}>
+                      {r.id} · {r.client}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <Field label="Método de pago">
+              <select value={method} onChange={(e) => setMethod(e.target.value)}>
+                {['Transferencia Bs.', 'Pago Móvil', 'Zelle USD', 'Efectivo USD'].map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Monto aplicado a factura USD">
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </Field>
+            <Field label="Referencia comprobante">
+              <input
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                placeholder="N° transferencia / comprobante"
+              />
+            </Field>
+            <div className="notice full">
+              Equivalente: {ves(Number(amount) * f.rate)} a {f.rate} Bs./USD
+              <br />
+              IGTF:{' '}
+              {usd(
+                method === 'Zelle USD' || method === 'Efectivo USD' ? Number(amount) * 0.03 : 0,
+              )}{' '}
+              · Cobro adicional al monto aplicado.
+            </div>
+          </>
+        ) : mode === 'receive' ? (
+          <>
+            <Field label="Cantidad recibida">
+              <input
+                type="number"
+                min="1"
+                max={Number(row?.quantity) - Number(row?.received)}
+                value={qty}
+                onChange={(e) => setQty(e.target.value)}
+              />
+            </Field>
+            <div className="notice">
+              Pendiente: {Number(row?.quantity) - Number(row?.received)} · El inventario se
+              incrementará al confirmar.
+            </div>
+          </>
+        ) : mode === 'quality' ? (
+          <>
+            <Field label="Medición dimensional / tolerancia (mm)">
+              <input
+                value={quality}
+                onChange={(e) => setQuality(e.target.value)}
+                placeholder="Ø 45,000 / tolerancia ±0,020"
+              />
+            </Field>
+            <Field label="Firma responsable">
+              <select value={operator} onChange={(e) => setOperator(e.target.value)}>
+                {f.data.personal.map((p) => (
+                  <option key={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </Field>
+            <div className="notice full">
+              Al firmar la conformidad se marca la OT terminada. Registrar medición en milímetros
+              (0,001 mm = 1 µm).
+            </div>
+          </>
+        ) : (
+          <>
+            {module === 'inventario' && mode === 'create' && (
+              <>
+                <Field label="Nombre del material / aleación" full>
+                  <input
+                    placeholder="Ej. Bronce Fosfórico SAE 660 Barra Redonda"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </Field>
+                <Field label="Unidad de medida">
+                  <select value={unit} onChange={(e) => setUnit(e.target.value)}>
+                    <option value="kg">Kilogramos (kg)</option>
+                    <option value="barra">Barras</option>
+                    <option value="placa">Planchas / Láminas</option>
+                    <option value="pz">Unidades / Piezas (pz)</option>
+                    <option value="m">Metros (m)</option>
+                    <option value="caja">Cajas</option>
+                    <option value="cilindro">Cilindros</option>
+                  </select>
+                </Field>
+                <Field label="Ubicación en almacén">
+                  <input
+                    placeholder="Ej. Estante 2-B, Almacén Central"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                  />
+                </Field>
+                <Field label="Stock disponible">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={qty}
+                    onChange={(e) => setQty(e.target.value)}
+                  />
+                </Field>
+                <Field label="Stock mínimo de alerta">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={minStock}
+                    onChange={(e) => setMinStock(e.target.value)}
+                  />
+                </Field>
+                <Field label="Costo unitario de compra (USD)">
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </Field>
+              </>
+            )}
+
+            {module === 'taller' && mode === 'create' && (
+              <>
+                <Field label="Nombre del equipo / máquina" full>
+                  <input
+                    placeholder="Ej. Torno CNC Doosan Puma 2600"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </Field>
+                <Field label="Tipo / Proceso técnico">
+                  <input
+                    placeholder="Ej. Tornería CNC de precisión 4 ejes"
+                    value={standard}
+                    onChange={(e) => setStandard(e.target.value)}
+                  />
+                </Field>
+                <Field label="Capacidad mensual (Horas)">
+                  <input
+                    type="number"
+                    min="1"
+                    value={capacity}
+                    onChange={(e) => setCapacity(e.target.value)}
+                  />
+                </Field>
+                <Field label="Tarifa / Costo por hora (USD)">
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </Field>
+                <Field label="Próximo mantenimiento preventivo">
+                  <input
+                    type="date"
+                    value={maintenance}
+                    onChange={(e) => setMaintenance(e.target.value)}
+                  />
+                </Field>
+              </>
+            )}
+
+            {['clientes', 'personal', 'gastos', 'compras'].includes(module) &&
+              mode === 'create' && (
+                <Field
+                  label={
+                    module === 'gastos'
+                      ? 'Categoría'
+                      : module === 'compras'
+                        ? 'Proveedor'
+                        : 'Nombre / razón social'
+                  }
+                >
+                  {module === 'gastos' ? (
+                    <select value={name} onChange={(e) => setName(e.target.value)}>
+                      {EXPENSE_CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  ) : module === 'compras' ? (
+                    <>
+                      <input
+                        list="famesa-suppliers-list"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Selecciona o escribe el proveedor..."
+                      />
+                      <datalist id="famesa-suppliers-list">
+                        {supplierOptions.map((sup) => (
+                          <option key={sup} value={sup} />
+                        ))}
+                      </datalist>
+                    </>
+                  ) : (
+                    <input value={name} onChange={(e) => setName(e.target.value)} />
+                  )}
+                </Field>
+              )}
+
+            {!['personal', 'gastos', 'clientes', 'compras', 'inventario', 'taller'].includes(
+              module,
+            ) &&
+              mode !== 'work' && (
+                <Field
+                  label={module === 'leads' ? 'Empresa / Prospecto B2B' : 'Cliente industrial'}
+                >
+                  {module === 'leads' || f.data.clientes.length === 0 ? (
+                    <input
+                      value={client}
+                      onChange={(e) => setClient(e.target.value)}
+                      placeholder="Nombre o razón social de la empresa..."
+                    />
+                  ) : (
+                    <select value={client} onChange={(e) => setClient(e.target.value)}>
+                      {f.data.clientes.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </Field>
+              )}
+
+            {mode !== 'work' && module !== 'inventario' && module !== 'taller' && (
+              <Field
+                label={
+                  module === 'personal'
+                    ? 'Cargo / Especialidad técnica'
+                    : module === 'clientes'
+                      ? 'Sector industrial (ej. Siderúrgica, Alimentos)'
+                      : 'Descripción / alcance del trabajo'
+                }
+                full
+              >
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Descripción técnica, dimensiones y alcance..."
+                />
+              </Field>
+            )}
+
+            {['cotizaciones', 'compras', 'ordenes'].includes(module) && mode !== 'work' && (
+              <>
+                <Field label="Material de inventario">
+                  <select value={material} onChange={(e) => setMaterial(e.target.value)}>
+                    {f.data.inventario.map((m) => (
+                      <option value={m.id} key={m.id}>
+                        {m.name} · {usd(Number(m.cost))}/{m.unit}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Cantidad de material / unidades">
+                  <input
+                    type="number"
+                    min="1"
+                    value={qty}
+                    onChange={(e) => setQty(e.target.value)}
+                  />
+                </Field>
+              </>
+            )}
+
+            {(isQuote || mode === 'work' || module === 'ordenes') && (
+              <>
+                <Field label="Máquina asignada">
+                  <select value={machine} onChange={(e) => setMachine(e.target.value)}>
+                    {f.data.taller.map((m) => (
+                      <option value={m.id} key={m.id}>
+                        {m.id} · {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Operario asignado">
+                  <select value={operator} onChange={(e) => setOperator(e.target.value)}>
+                    {f.data.personal.map((m) => (
+                      <option key={m.id} value={m.name}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Horas de máquina">
+                  <input
+                    type="number"
+                    min="0"
+                    value={machineHours}
+                    onChange={(e) => setMachineHours(e.target.value)}
+                  />
+                </Field>
+                <Field label="Horas de operario">
+                  <input
+                    type="number"
+                    min="0"
+                    value={laborHours}
+                    onChange={(e) => setLaborHours(e.target.value)}
+                  />
+                </Field>
+              </>
+            )}
+
+            {isQuote ? (
+              <Field label="Precio unitario de venta USD">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+              </Field>
+            ) : (
+              mode !== 'work' &&
+              module !== 'inventario' &&
+              module !== 'taller' && (
+                <Field
+                  label={
+                    module === 'facturacion'
+                      ? 'Base imponible USD (sin IVA)'
+                      : module === 'clientes'
+                        ? 'Límite de crédito USD'
+                        : module === 'personal'
+                          ? 'Costo por hora USD'
+                          : 'Importe USD'
+                  }
+                >
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </Field>
+              )
+            )}
+
+            {module === 'clientes' && (
+              <>
+                <Field label="RIF comprador">
+                  <input
+                    value={rif}
+                    onChange={(e) => setRif(e.target.value)}
+                    placeholder="J-12345678-9"
+                  />
+                </Field>
+                <Field label="WhatsApp (código país)">
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="58..."
+                  />
+                </Field>
+                <Field label="Persona de contacto">
+                  <input
+                    value={contact}
+                    onChange={(e) => setContact(e.target.value)}
+                    placeholder="Ej. Ing. Jefe de Mantenimiento"
+                  />
+                </Field>
+                <Field label="Dirección fiscal">
+                  <input
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Zona Industrial..."
+                  />
+                </Field>
+                <Field label="Plazo de crédito (días)">
+                  <input
+                    type="number"
+                    min="0"
+                    value={days}
+                    onChange={(e) => setDays(e.target.value)}
+                  />
+                </Field>
+                <Field label="Segmento de cuenta">
+                  <select value={segment} onChange={(e) => setSegment(e.target.value)}>
+                    <option value="Industrial">Industrial</option>
+                    <option value="Cuenta clave">Cuenta clave</option>
+                  </select>
+                </Field>
+              </>
+            )}
+
+            {module === 'personal' && (
+              <Field label="Certificación / Norma técnica">
+                <input
+                  value={certification}
+                  onChange={(e) => setCertification(e.target.value)}
+                  placeholder="Ej. ASME Sec. IX / Tornería CNC"
+                />
+              </Field>
+            )}
+
+            {module === 'gastos' && (
+              <>
+                <Field label="Presupuesto USD">
+                  <input
+                    type="number"
+                    min="0"
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                  />
+                </Field>
+                <Field label="Referencia comprobante">
+                  <input value={reference} onChange={(e) => setReference(e.target.value)} />
+                </Field>
+                <Field label="Recurrencia">
+                  <select
+                    value={recurring ? 'si' : 'no'}
+                    onChange={(e) => setRecurring(e.target.value === 'si')}
+                  >
+                    <option value="si">Recurrente</option>
+                    <option value="no">No recurrente</option>
+                  </select>
+                </Field>
+              </>
+            )}
+
+            {['ordenes', 'leads'].includes(module) && (
+              <Field label="Prioridad">
+                <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+                  {['Emergencia 24-48h', 'Prioritaria', 'Estándar'].map((p) => (
+                    <option key={p}>{p}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
+          </>
+        )}
+      </div>
+
+      {isQuote && (
+        <>
+          <div className="cost-summary">
+            <div>
+              <span className="field-label">Costo estimado USD</span>
+              <div className="value">{usd(calc.cost)}</div>
+              <span className="mono muted">{ves(calc.cost * f.rate)}</span>
+            </div>
+            <div>
+              <span className="field-label">Precio total USD</span>
+              <div className="value">{usd(calc.total)}</div>
+              <span className="mono muted">{ves(calc.total * f.rate)}</span>
+            </div>
+            <div>
+              <span className="field-label">Utilidad bruta</span>
+              <div className="value">{usd(calc.profit)}</div>
+              <span className="mono muted">{ves(calc.profit * f.rate)}</span>
+            </div>
+          </div>
+          <div
+            className={`margin-badge ${
+              calc.margin >= 35 ? 'positive' : calc.margin >= 20 ? 'warning' : 'negative'
+            }`}
+          >
+            <span>
+              MARGEN BRUTO ·{' '}
+              {calc.margin >= 35
+                ? 'SALUDABLE'
+                : calc.margin >= 20
+                  ? 'REVISAR PRECIO'
+                  : 'POR DEBAJO DE META'}
+            </span>
+            <span>{calc.margin.toFixed(1)}%</span>
+          </div>
+        </>
+      )}
+
+      {module === 'facturacion' && mode === 'create' && (
+        <div className="notice">
+          IVA 16%: {usd(Number(amount) * 0.16)} · Total: {usd(Number(amount) * 1.16)} /{' '}
+          {ves(Number(amount) * 1.16 * f.rate)}
+          <br />
+          Tasa congelada al emitir: {f.rate} Bs./USD
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function sendWhatsApp(phone: string, text: string) {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 10) {
+    toast.error('Completa un teléfono WhatsApp real con código de país');
+    return;
+  }
+  window.open(
+    `https://wa.me/${digits}?text=${encodeURIComponent(text)}`,
+    '_blank',
+    'noopener,noreferrer',
+  );
+}

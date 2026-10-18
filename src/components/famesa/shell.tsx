@@ -423,6 +423,7 @@ export function FamesaShell({
 
       {dialog && (
         <RecordDialog
+          key={`${dialog.module}-${dialog.mode}-${dialog.row?.id ?? 'new'}`}
           state={dialog}
           onClose={() => onDialog(null)}
           onChange={(next) => onDialog(next)}

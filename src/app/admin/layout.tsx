@@ -1,15 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { JetBrains_Mono } from "next/font/google";
 import { AdminShell } from "@/components/admin/AdminShell";
 import "./admin.css";
-
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-mono-admin",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "FAMESA SUITE · Panel de Administración Industrial | RIF J-31352388-7",
@@ -21,14 +13,14 @@ export const metadata: Metadata = {
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div
-      className={mono.variable}
       style={
         {
           // Reutiliza las fuentes ya cargadas por el layout raíz (Barlow
-          // Condensed + Inter) y añade JetBrains Mono para datos monoespaciados.
+          // Condensed + Inter) y añade JetBrains Mono / monospace para datos monoespaciados.
           "--font-sans": "var(--font-inter)",
           "--font-display": "var(--font-barlow)",
-          "--font-mono": "var(--font-mono-admin)",
+          "--font-mono":
+            "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
         } as React.CSSProperties
       }
     >

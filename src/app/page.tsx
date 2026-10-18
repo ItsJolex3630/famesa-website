@@ -331,6 +331,7 @@ const clientes = [
   { nombre: "Grupo Corimon", sector: "Industrial y construcción" },
   { nombre: "Ajeven", sector: "Bebidas" },
   { nombre: "Coca Cola Fensa", sector: "Bebidas y embotellado" },
+  { nombre: "Papeles Venezolanos C.A", sector: "Papelera y celulosa" },
 ];
 
 const processSteps = [

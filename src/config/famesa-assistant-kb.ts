@@ -511,6 +511,7 @@ export const FAMESA_CORPORATE = {
     "Grupo Corimon",
     "Ajeven C.A.",
     "Coca-Cola FEMSA C.A.",
+    "Papeles Venezolanos C.A.",
   ],
   providers: [
     "Sumindu C.A.",
@@ -572,7 +573,7 @@ const GREETING_KEYWORDS = ["hola", "buenas", "buenos dias", "buenas tardes", "sa
 const URGENCY_KEYWORDS = ["urgencia", "urgente", "parada de planta", "parada", "emergencia", "24/7", "inmediato"];
 const QUOTE_KEYWORDS = ["precio", "precios", "costo", "costos", "cuanto", "cuánto", "cotizar", "cotizacion", "cotización", "presupuesto", "rfq", "valor"];
 const CONTACT_KEYWORDS = ["contacto", "telefono", "teléfono", "whatsapp", "correo", "email", "ubicacion", "ubicación", "direccion", "dirección", "horario", "donde", "dónde", "llegar"];
-const CLIENT_KEYWORDS = ["cliente", "clientes", "confian", "confían", "mondelez", "mondelēz", "coca", "femsa", "sindoni", "corimon", "ajeven", "empresas grandes", "a quien le venden", "quienes son sus clientes", "quiénes son sus clientes"];
+const CLIENT_KEYWORDS = ["cliente", "clientes", "confian", "confían", "mondelez", "mondelēz", "coca", "femsa", "sindoni", "corimon", "ajeven", "paveca", "papeles venezolanos", "empresas grandes", "a quien le venden", "quienes son sus clientes", "quiénes son sus clientes"];
 const FISCAL_KEYWORDS = ["rif", "registro mercantil", "razon social", "razón social", "datos fiscales", "datos de la empresa", "j-31352388-7"];
 const FACILITY_KEYWORDS = ["instalaciones", "galpon", "galpón", "600 m2", "600 m²", "metros cuadrados", "m2", "m²"];
 const CAPACITY_KEYWORDS = ["capacidad", "volteo", "entre puntos", "torno mas grande", "torno más grande", "medidas maximas", "medidas máximas", "hasta cuanto", "hasta cuánto", "ck6140", "que equipos"];

@@ -41,8 +41,10 @@ export const onRequest = route("POST", async (ctx: Ctx) => {
     picture?: string;
   };
 
-  // 2. Verificar Audience si GOOGLE_CLIENT_ID está configurado
-  const configuredClientId = ctx.env.GOOGLE_CLIENT_ID;
+  // 2. Verificar Audience si GOOGLE_CLIENT_ID está configurado o usar Client ID por defecto
+  const DEFAULT_GOOGLE_CLIENT_ID =
+    "368451259646-lvkp7q372m712rsj2adbidam4d72g4m0.apps.googleusercontent.com";
+  const configuredClientId = ctx.env.GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID;
   if (configuredClientId && payload.aud !== configuredClientId) {
     throw new HttpError(403, "Token no autorizado para esta aplicación");
   }

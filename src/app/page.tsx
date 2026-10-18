@@ -687,7 +687,10 @@ export default function HomePage() {
   useEffect(() => {
     if (homeUser) return;
     let timer: NodeJS.Timeout;
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+    const DEFAULT_GOOGLE_CLIENT_ID =
+      "368451259646-lvkp7q372m712rsj2adbidam4d72g4m0.apps.googleusercontent.com";
+    const clientId =
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() || DEFAULT_GOOGLE_CLIENT_ID;
 
     const initBtn = () => {
       const g = (window as unknown as {
@@ -703,7 +706,7 @@ export default function HomePage() {
 
       if (g?.accounts?.id && homeGoogleBtnRef.current) {
         g.accounts.id.initialize({
-          client_id: clientId || "famesa-oauth.apps.googleusercontent.com",
+          client_id: clientId,
           callback: handleHomeGoogleLogin,
           auto_select: true,
         });

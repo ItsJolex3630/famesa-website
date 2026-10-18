@@ -27,7 +27,10 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
   // Inicializar Google Sign-In SDK
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+    const DEFAULT_GOOGLE_CLIENT_ID =
+      "368451259646-lvkp7q372m712rsj2adbidam4d72g4m0.apps.googleusercontent.com";
+    const clientId =
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() || DEFAULT_GOOGLE_CLIENT_ID;
 
     const setupGoogle = () => {
       const g = (window as unknown as {
@@ -44,7 +47,7 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
 
       if (g?.accounts?.id && googleBtnRef.current) {
         g.accounts.id.initialize({
-          client_id: clientId || "famesa-oauth.apps.googleusercontent.com",
+          client_id: clientId,
           callback: async (res: { credential?: string }) => {
             if (!res.credential) return;
             setBusy(true);

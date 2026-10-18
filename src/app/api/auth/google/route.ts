@@ -61,9 +61,13 @@ export async function POST(request: Request) {
       picture?: string;
     };
 
-    // 2. Validar Client ID si está configurado en el servidor
+    // 2. Validar Client ID si está configurado en el servidor o usar Client ID por defecto
+    const DEFAULT_GOOGLE_CLIENT_ID =
+      "368451259646-lvkp7q372m712rsj2adbidam4d72g4m0.apps.googleusercontent.com";
     const configuredClientId =
-      process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      process.env.GOOGLE_CLIENT_ID ||
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+      DEFAULT_GOOGLE_CLIENT_ID;
     if (configuredClientId && payload.aud !== configuredClientId) {
       await logAudit("auth", ipHash, "login_failed", "Audience de Google no coincide con Client ID");
       return json({ ok: false, error: "Token no autorizado para esta aplicación" }, 403);

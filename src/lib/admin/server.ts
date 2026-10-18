@@ -32,10 +32,14 @@ export function isDbConfigured(): boolean {
   return Boolean(process.env.TURSO_URL && process.env.TURSO_AUTH_TOKEN);
 }
 
-export function json(data: unknown, status = 200): Response {
+export function json(
+  data: unknown,
+  status = 200,
+  headers: Record<string, string> = {},
+): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8" },
+    headers: { "Content-Type": "application/json; charset=utf-8", ...headers },
   });
 }
 
@@ -77,8 +81,87 @@ export function assertMethod(request: Request, allowed: string | string[]): void
 
 // --- Autenticación JWT (jose) ---
 const encoder = new TextEncoder();
+
+/** Secreto de arranque histórico: NUNCA debe usarse en producción. */
+const INSECURE_JWT_FALLBACK = "famesa-suite-bootstrap-secret-change-me";
+const MIN_SECRET_LENGTH = 16;
+
+/**
+ * Devuelve la clave de firma JWT con principio FAIL-CLOSED.
+ * En producción, si el secreto falta, es corto o conserva el valor por defecto,
+ * lanza HttpError(500) y el acceso queda denegado. En desarrollo permite el
+ * fallback para no romper la experiencia local.
+ */
 function secretKey(): Uint8Array {
-  return encoder.encode(process.env.ADMIN_JWT_SECRET || "famesa-suite-bootstrap-secret-change-me");
+  const raw = process.env.ADMIN_JWT_SECRET?.trim();
+  const isWeak = !raw || raw.length < MIN_SECRET_LENGTH || raw === INSECURE_JWT_FALLBACK;
+  if (isWeak) {
+    if (process.env.NODE_ENV === "production") {
+      throw new HttpError(500, "ADMIN_JWT_SECRET no configurado o inseguro en producción");
+    }
+    return encoder.encode(INSECURE_JWT_FALLBACK);
+  }
+  return encoder.encode(raw);
+}
+
+// --- Verificación Criptográfica de Clave API (Tiempo Constante) ---
+
+/**
+ * Obtiene la clave API del entorno garantizando Fail-Closed.
+ * Si no está definida o es demasiado corta, arroja HttpError(500).
+ */
+export function getAdminApiKey(): string {
+  const key = process.env.ADMIN_API_KEY;
+  if (!key || key.trim().length < MIN_SECRET_LENGTH) {
+    throw new HttpError(
+      500,
+      "Clave API administrativa (ADMIN_API_KEY) no configurada o insegura en el servidor.",
+    );
+  }
+  return key.trim();
+}
+
+/**
+ * Compara dos cadenas en tiempo constante mediante digest SHA-256 y XOR.
+ * Es compatible tanto con Node.js como con Edge Runtime (Vercel/Cloudflare).
+ */
+export async function timingSafeCompare(a: string, b: string): Promise<boolean> {
+  const bufA = await crypto.subtle.digest("SHA-256", encoder.encode(a));
+  const bufB = await crypto.subtle.digest("SHA-256", encoder.encode(b));
+  const viewA = new Uint8Array(bufA);
+  const viewB = new Uint8Array(bufB);
+
+  let mismatch = 0;
+  for (let i = 0; i < viewA.length; i += 1) {
+    mismatch |= viewA[i] ^ viewB[i];
+  }
+  return mismatch === 0;
+}
+
+/**
+ * Valida si la clave API candidata coincide exactamente con la configurada.
+ * Nunca lanza: ante cualquier fallo (clave ausente o no configurada) devuelve false.
+ */
+export async function verifyAdminApiKey(candidateKey: string): Promise<boolean> {
+  if (!candidateKey || typeof candidateKey !== "string") return false;
+  try {
+    const masterKey = getAdminApiKey();
+    return await timingSafeCompare(candidateKey.trim(), masterKey);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extrae la IP del cliente tras el proxy (compatible Vercel / Cloudflare Pages).
+ */
+export function clientIp(request: Request): string {
+  const cf = request.headers.get("cf-connecting-ip");
+  const xff = request.headers.get("x-forwarded-for");
+  const real = request.headers.get("x-real-ip");
+  const first = xff ? xff.split(",")[0] : "";
+  const raw = (cf || first || real || "unknown").trim();
+  return raw.slice(0, 100) || "unknown";
 }
 
 export interface SessionUser {
@@ -144,6 +227,8 @@ export type AuditAction =
   | "delete"
   | "status_change"
   | "login"
+  | "login_failed"
+  | "logout"
   | "export";
 
 export async function logAudit(

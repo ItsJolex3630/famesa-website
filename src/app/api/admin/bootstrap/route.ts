@@ -1,10 +1,17 @@
 // GET /api/admin/bootstrap · Hidrata el panel con el estado real de Turso.
 export const runtime = "edge";
 
-import { getDb, num, json, errorResponse, currentUser } from "@/lib/admin/server";
+import { getDb, num, json, errorResponse, currentUser, isDbConfigured } from "@/lib/admin/server";
 
 export async function GET(request: Request) {
   try {
+    // Modo degradado (preview): si Turso no está configurado no se expone ningún
+    // dato real; el endpoint autenticado responde 200 para poder verificar el
+    // control de acceso (401 sin credenciales / 200 autorizado) en local.
+    if (!isDbConfigured()) {
+      return json({ ok: true, preview: true, rate: 54.8, userEmail: "famesa2005@gmail.com" });
+    }
+
     const db = getDb();
     const rows = async (sql: string) => (await db.execute(sql)).rows;
 

@@ -54,3 +54,11 @@ section.settings-section{background:var(--surface)}
 .rate-sync-btn:hover{background:rgba(0,41,159,.08);color:var(--primary)}
 @media(max-width:1200px){.rate-pill{padding:0 7px;gap:4px;font-size:9px}.rate-pill .rate-val{font-size:10px}}
 @media(max-width:760px){.rates-switcher{height:30px}.rate-pill{padding:0 5px;gap:3px}.rate-pill .rate-currency{font-size:8px}.rate-pill .rate-val{font-size:9px}.rate-sync-btn{display:none}}
+
+/* ==========================================================================
+   BOTÓN DE BLOQUEO DE SESIÓN (Topbar) · Cerrar sesión / AdminAuthGate
+   ========================================================================== */
+.lock-panel-btn{border-color:var(--orange)!important;color:var(--orange)!important;gap:6px!important}
+.lock-panel-btn:hover{background:var(--orange-tint)!important;color:var(--orange)!important}
+.lock-panel-btn svg{color:var(--orange)}
+@media(max-width:1200px){.lock-panel-label{display:none}}

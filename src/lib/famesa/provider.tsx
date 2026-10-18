@@ -48,6 +48,7 @@ type ContextType = {
   payment: (id: string, amount: number, method: string) => void;
   saveCloud: () => Promise<void>;
   loadCloud: () => Promise<void>;
+  clearSession: () => void;
   resetClean: () => void;
   resetDemo: () => void;
   userEmail: string;
@@ -82,24 +83,52 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
   const [userEmail, setUserEmail] = useState('famesa2005@gmail.com');
   const [cloudBusy, setCloudBusy] = useState(false);
 
-  useEffect(() => {
-    // Intenta hidratar desde la API REST de Cloudflare Pages Functions (/api/admin/bootstrap)
-    const token = typeof window !== 'undefined' ? sessionStorage.getItem('famesa_admin_token') : null;
-    fetch('/api/admin/bootstrap', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((payload: { ok?: boolean; rate?: number; userEmail?: string; data?: Partial<DataStore> } | null) => {
-        if (payload?.ok && payload.data) {
-          setData((prev) => ({ ...prev, ...payload.data }));
-          if (payload.rate) setRateState(payload.rate);
-          if (payload.userEmail) setUserEmail(payload.userEmail);
-        }
-      })
-      .catch(() => {
-        // Fallback silencioso a datos seed en local / preview
+  /**
+   * Hidrata el estado desde el endpoint autenticado de Turso (/api/admin/bootstrap).
+   * Envía el Bearer de sesión (si existe); la cookie HttpOnly viaja por sí sola.
+   * Devuelve true solo cuando el servidor entregó datos reales.
+   */
+  const syncFromServer = async (): Promise<boolean> => {
+    try {
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('famesa_admin_token') : null;
+      const res = await fetch('/api/admin/bootstrap', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        cache: 'no-store',
       });
+      if (!res.ok) return false;
+      const payload = (await res.json()) as {
+        ok?: boolean;
+        rate?: number;
+        userEmail?: string;
+        data?: Partial<DataStore>;
+      };
+      if (!payload?.ok || !payload.data) return false;
+      setData((prev) => ({ ...prev, ...payload.data }));
+      if (payload.rate) setRateState(payload.rate);
+      if (payload.userEmail) setUserEmail(payload.userEmail);
+      return true;
+    } catch {
+      // Fallback silencioso a datos seed en local / preview.
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    void syncFromServer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** Cabeceras JSON + Bearer de sesión para las llamadas a /api/admin/*. */
+  const adminHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    try {
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('famesa_admin_token') : null;
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch {
+      /* sessionStorage no disponible */
+    }
+    return headers;
+  };
 
   const audit = (action: string) =>
     setAudits((prev) => [{ time: new Date().toLocaleString('es-VE'), action, role }, ...prev]);
@@ -122,7 +151,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     toast.success('Tasa actualizada · Documentos emitidos conservan su tasa');
     void fetch('/api/admin/settings/rate', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders(),
       body: JSON.stringify({ rate_usd_ves: n }),
     }).catch(() => {});
   };
@@ -182,7 +211,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     toast.success(`${r.id} registrado correctamente`);
     void fetch(`/api/admin/${module}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders(),
       body: JSON.stringify(r),
     }).catch(() => {});
   };
@@ -197,7 +226,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     toast.success(`${id} actualizado`);
     void fetch(`/api/admin/${module}/${encodeURIComponent(id)}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders(),
       body: JSON.stringify(patch),
     }).catch(() => {});
   };
@@ -212,6 +241,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     toast.success(`Registro ${id} eliminado correctamente`);
     void fetch(`/api/admin/${module}/${encodeURIComponent(id)}`, {
       method: 'DELETE',
+      headers: adminHeaders(),
     }).catch(() => {});
   };
 
@@ -458,6 +488,13 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
   const loadCloud = async () => {
     setCloudBusy(true);
     try {
+      // 1. Prioridad: hidratar datos reales desde Turso (sesión autenticada).
+      if (await syncFromServer()) {
+        audit('Datos maestros sincronizados desde Turso (sesión autenticada)');
+        toast.success('Datos sincronizados desde Turso');
+        return;
+      }
+      // 2. Respaldo: instantánea local guardada manualmente.
       const raw = localStorage.getItem('famesa_suite_snapshot');
       if (!raw) {
         toast.info('No hay instantánea previa; mostrando base activa');
@@ -476,6 +513,12 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     } finally {
       setCloudBusy(false);
     }
+  };
+
+  /** Purga el estado en memoria al bloquear el panel (sin datos sensibles residuales). */
+  const clearSession = () => {
+    setData(makeEmptyStore());
+    setAudits([]);
   };
 
   const resetClean = () => {
@@ -526,6 +569,7 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
         payment,
         saveCloud,
         loadCloud,
+        clearSession,
         resetClean,
         resetDemo,
         userEmail,

@@ -24,6 +24,7 @@ import {
   Menu,
   X,
   RefreshCw,
+  Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFamesa } from '@/lib/famesa/provider';
@@ -282,6 +283,22 @@ export function FamesaShell({
               />
               <span>VER Bs.</span>
             </label>
+
+            <Button
+              variant="outline"
+              size="sm"
+              title="Bloquear Panel · Cerrar sesión inmediatamente"
+              aria-label="Bloquear Panel"
+              className="lock-panel-btn"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('famesa:admin-lock'));
+                }
+              }}
+            >
+              <Lock size={13} />
+              <span className="lock-panel-label">BLOQUEAR PANEL</span>
+            </Button>
 
             <Button variant="outline" size="sm" onClick={() => setCmdOpen(true)}>
               <Search size={13} />

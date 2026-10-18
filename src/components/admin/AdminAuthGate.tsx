@@ -23,6 +23,11 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
   const [googleReady, setGoogleReady] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const googleBtnRef = useRef<HTMLDivElement>(null);
+  const googleInitializedRef = useRef(false);
+  const onUnlockedRef = useRef(onUnlocked);
+  onUnlockedRef.current = onUnlocked;
+  const fRef = useRef(f);
+  fRef.current = f;
 
   // Inicializar Google Sign-In SDK
   useEffect(() => {
@@ -33,6 +38,8 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() || DEFAULT_GOOGLE_CLIENT_ID;
 
     const setupGoogle = () => {
+      if (googleInitializedRef.current) return;
+
       const g = (window as unknown as {
         google?: {
           accounts?: {
@@ -46,6 +53,7 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
       })?.google;
 
       if (g?.accounts?.id && googleBtnRef.current) {
+        googleInitializedRef.current = true;
         g.accounts.id.initialize({
           client_id: clientId,
           callback: async (res: { credential?: string }) => {
@@ -71,8 +79,8 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
                 localStorage.setItem("famesa_admin_user", JSON.stringify(data.user));
                 localStorage.setItem("kt_admin_user", JSON.stringify(data.user));
                 localStorage.setItem("kt_user", JSON.stringify(data.user));
-                await f.loadCloud();
-                onUnlocked();
+                await fRef.current.loadCloud();
+                onUnlockedRef.current();
               } else {
                 setError(
                   data?.error ||
@@ -107,7 +115,7 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
 
     setupGoogle();
     return () => clearTimeout(timer);
-  }, [f, onUnlocked]);
+  }, []);
 
   useEffect(() => {
     inputRef.current?.focus();

@@ -602,6 +602,7 @@ export default function HomePage() {
     isAdmin?: boolean;
   } | null>(null);
   const homeGoogleBtnRef = useRef<HTMLDivElement>(null);
+  const homeGoogleInitRef = useRef(false);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -693,6 +694,8 @@ export default function HomePage() {
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() || DEFAULT_GOOGLE_CLIENT_ID;
 
     const initBtn = () => {
+      if (homeGoogleInitRef.current) return;
+
       const g = (window as unknown as {
         google?: {
           accounts?: {
@@ -705,6 +708,7 @@ export default function HomePage() {
       })?.google;
 
       if (g?.accounts?.id && homeGoogleBtnRef.current) {
+        homeGoogleInitRef.current = true;
         g.accounts.id.initialize({
           client_id: clientId,
           callback: handleHomeGoogleLogin,

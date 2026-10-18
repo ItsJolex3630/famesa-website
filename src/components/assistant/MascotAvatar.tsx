@@ -82,7 +82,7 @@ export function MascotAvatar({
           width={variant === "full" ? 571 : 400}
           height={variant === "full" ? 1024 : 400}
           priority={priority}
-          className="h-full w-full object-cover object-top"
+          className="h-full w-full object-cover object-center"
           sizes={`${size}px`}
         />
       </span>

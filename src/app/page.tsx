@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   X,
+  Menu,
   Maximize2,
   Mail,
 } from "lucide-react";
@@ -603,8 +604,21 @@ export default function HomePage() {
   } | null>(null);
   const homeGoogleBtnRef = useRef<HTMLDivElement>(null);
   const homeGoogleInitRef = useRef(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // Bloquear scroll cuando el drawer móvil está abierto
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   // Generate unique ticket ID on mount
   useEffect(() => {
@@ -1013,65 +1027,87 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
       {/* 1. TOP ANNOUNCEMENT & STATUS RIBBON */}
       <div className="top-ribbon">
         <div className="w">
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "#e2e8f0", fontWeight: 600 }}>
-              <span className="pulse-led" />
-              PLANTA OPERATIVA 100% · SANTA ROSA, VALENCIA
-            </span>
-            <span style={{ opacity: 0.5, display: "inline-block" }}>|</span>
-            <span style={{ color: "var(--or)", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
-              <Clock size={13} />
-              Atención 24/7 para Paradas de Planta
-            </span>
+          {/* Vista Desktop (>= 1024px) */}
+          <div className="top-ribbon-desktop">
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "#e2e8f0", fontWeight: 600 }}>
+                <span className="pulse-led" />
+                PLANTA OPERATIVA 100% · SANTA ROSA, VALENCIA
+              </span>
+              <span style={{ opacity: 0.35, display: "inline-block" }}>|</span>
+              <span style={{ color: "var(--or)", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                <Clock size={12} />
+                Atención 24/7 para Paradas de Planta
+              </span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "11px", color: "#94a3b8" }}>Líneas de Taller:</span>
+              <button
+                onClick={() => copyToClipboard("+584143410187", "0414 341 0187")}
+                className="chip-copy"
+                title="Clic para copiar número"
+              >
+                <Phone size={11} style={{ color: "var(--or)" }} />
+                0414 341 0187
+                <Copy size={10} style={{ opacity: 0.7 }} />
+              </button>
+              <button
+                onClick={() => copyToClipboard("+584121435069", "0412 143 5069")}
+                className="chip-copy"
+                title="Clic para copiar número"
+              >
+                <Phone size={11} style={{ color: "var(--or)" }} />
+                0412 143 5069
+                <Copy size={10} style={{ opacity: 0.7 }} />
+              </button>
+              <a
+                href={`mailto:${CONTACT.email}?subject=Consulta%20T%C3%A9cnica%20Famesa`}
+                className="chip-copy"
+                title="Enviar correo directo a FAMESA C.A."
+              >
+                <Mail size={11} style={{ color: "var(--or)" }} />
+                {CONTACT.email}
+              </a>
+            </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "11px", color: "#94a3b8" }}>Líneas de Taller:</span>
-            <button
-              onClick={() => copyToClipboard("+584143410187", "0414 341 0187")}
-              className="chip-copy"
-              title="Clic para copiar número"
-            >
-              <Phone size={11} style={{ color: "var(--or)" }} />
-              0414 341 0187
-              <Copy size={10} style={{ opacity: 0.7 }} />
-            </button>
-            <button
-              onClick={() => copyToClipboard("+584121435069", "0412 143 5069")}
-              className="chip-copy"
-              title="Clic para copiar número"
-            >
-              <Phone size={11} style={{ color: "var(--or)" }} />
-              0412 143 5069
-              <Copy size={10} style={{ opacity: 0.7 }} />
-            </button>
+          {/* Vista Mobile / Tablet (< 1024px): Ultra-compacta en una sola línea */}
+          <div className="top-ribbon-mobile">
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "#e2e8f0", fontWeight: 600, fontSize: "11px" }}>
+              <span className="pulse-led" />
+              PLANTA 100% OPERATIVA · VALENCIA
+            </span>
             <a
-              href={`mailto:${CONTACT.email}?subject=Consulta%20T%C3%A9cnica%20Famesa`}
+              href="https://wa.me/584143410187?text=Emergencia%20de%20Planta"
+              target="_blank"
+              rel="noopener noreferrer"
               className="chip-copy"
-              title="Enviar correo directo a FAMESA C.A."
-              style={{ textDecoration: "none" }}
+              style={{ color: "var(--or)", fontWeight: 600 }}
             >
-              <Mail size={11} style={{ color: "var(--or)" }} />
-              {CONTACT.email}
+              <Clock size={11} />
+              24/7 Emergencias
             </a>
           </div>
         </div>
       </div>
 
-      {/* 2. BARRA DE NAVEGACIÓN VIDRIADA */}
+      {/* 2. BARRA DE NAVEGACIÓN VIDRIADA PRINCIPAL */}
       <nav className={scrolled ? "sc" : ""}>
         <div className="w">
-          <a href="#top" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+          {/* Logo y Enlace Home */}
+          <a href="#top" className="brand-link">
             <Image 
               src="/images/logo.png" 
               alt="FAMESA C.A. - Fabricaciones Metalmecánica, Soldaduras y Afines" 
-              width={200} 
-              height={77} 
+              width={180} 
+              height={44} 
               priority 
-              style={{ height: "46px", width: "auto", objectFit: "contain" }}
+              className="logo-img"
             />
           </a>
 
+          {/* Enlaces de Navegación de Escritorio */}
           <div className="nl">
             <a
               className="l"
@@ -1138,61 +1174,37 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
             </a>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "nowrap" }}>
-            {/* Si es administrador, enlace visible directo al panel admin */}
+          {/* Acciones de la Barra Superior */}
+          <div className="nav-actions">
+            {/* Si es administrador, acceso directo elegante al panel admin */}
             {homeUser?.isAdmin ? (
               <Link
                 href="/admin"
-                className="btn-admin"
-                style={{
-                  background: "var(--or, #FF8A1F)",
-                  color: "var(--nv, #0A1A3A)",
-                  fontWeight: 800,
-                  fontSize: "12px",
-                  padding: "8px 14px",
-                  borderRadius: "20px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  textDecoration: "none",
-                  boxShadow: "0 2px 8px rgba(255,138,31,0.25)",
-                  letterSpacing: ".04em",
-                  textTransform: "uppercase",
-                }}
+                className="btn-admin-pill"
                 title="Acceder al Panel de Administración FAMESA SUITE"
               >
-                ⚙️ Panel Admin
+                <Cog size={13} />
+                <span>Panel Admin</span>
               </Link>
             ) : null}
 
             {/* Menú de usuario autenticado o botón Google */}
             {homeUser ? (
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  background: "rgba(255,255,255,0.92)",
-                  border: "1px solid var(--sd, #C8D2E0)",
-                  borderRadius: "24px",
-                  padding: "4px 10px 4px 5px",
-                  backdropFilter: "blur(6px)",
-                }}
-              >
+              <div className="nav-user-pill">
                 {homeUser.picture ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={homeUser.picture}
                     alt={homeUser.name || "Usuario"}
-                    style={{ width: "26px", height: "26px", borderRadius: "50%", objectFit: "cover" }}
+                    style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }}
                   />
                 ) : (
                   <div
                     style={{
-                      width: "26px",
-                      height: "26px",
+                      width: "24px",
+                      height: "24px",
                       borderRadius: "50%",
-                      background: "var(--nv, #0A1A3A)",
+                      background: "var(--navy)",
                       color: "#fff",
                       fontSize: "11px",
                       fontWeight: 700,
@@ -1207,15 +1219,15 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
                   style={{
                     fontSize: "11px",
                     fontWeight: 600,
-                    maxWidth: "95px",
+                    maxWidth: "75px",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
-                    color: "var(--ink, #12203A)",
+                    color: "var(--ink)",
                   }}
                   title={homeUser.name || homeUser.email}
                 >
-                  {homeUser.name || homeUser.email.split("@")[0]}
+                  {homeUser.name?.split(" ")[0] || homeUser.email.split("@")[0]}
                 </span>
                 <button
                   type="button"
@@ -1235,20 +1247,219 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
                 </button>
               </div>
             ) : (
-              <div ref={homeGoogleBtnRef} id="g_home_signin" style={{ minHeight: "36px" }} />
+              <>
+                {/* Botón de Google en Desktop */}
+                <div 
+                  ref={homeGoogleBtnRef} 
+                  id="g_home_signin" 
+                  className="hidden min-[1180px]:block"
+                  style={{ minHeight: "36px" }} 
+                />
+
+                {/* Botón Acceder Compacto en Tablet/Móvil */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const g = (window as unknown as { google?: { accounts?: { id?: { prompt: () => void } } } })?.google;
+                    if (g?.accounts?.id?.prompt) {
+                      g.accounts.id.prompt();
+                    } else {
+                      setMobileMenuOpen(true);
+                    }
+                  }}
+                  className="nav-user-pill min-[1180px]:hidden"
+                  style={{ padding: "6px 10px", cursor: "pointer", fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}
+                  title="Iniciar sesión con Google"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  <span className="hidden sm:inline">Acceder</span>
+                </button>
+              </>
             )}
 
+            {/* Botón WhatsApp de Escritorio */}
             <a
-              className="btn nb"
+              className="btn-cta-nav"
               href="https://wa.me/584143410187?text=Hola%20Famesa%2C%20quiero%20una%20cotizaci%C3%B3n"
-              style={{ padding: "10px 18px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Solicitar cotización por WhatsApp"
             >
-              <MessageCircle size={16} />
-              Cotizar por WhatsApp
+              <MessageCircle size={15} />
+              <span>Cotizar</span>
             </a>
+
+            {/* Botón WhatsApp Icono en Móvil */}
+            <a
+              className="btn-cta-nav-mobile"
+              href="https://wa.me/584143410187?text=Hola%20Famesa%2C%20quiero%20una%20cotizaci%C3%B3n"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Cotizar por WhatsApp"
+            >
+              <MessageCircle size={18} />
+            </a>
+
+            {/* Botón Hamburguesa Móvil (< 1180px) */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="btn-hamburger"
+              aria-label="Abrir menú de navegación"
+            >
+              <Menu size={20} />
+            </button>
           </div>
         </div>
       </nav>
+
+      {/* 3. DRAWER DE NAVEGACIÓN MÓVIL (Off-canvas) */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm min-[1180px]:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+          style={{ animation: "drawerFadeIn 200ms ease forwards" }}
+        >
+          <div
+            className="fixed inset-y-0 right-0 w-[min(88vw,360px)] bg-white shadow-2xl flex flex-col z-50 overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+            style={{ animation: "drawerSlideLeft 250ms cubic-bezier(0.32, 0.72, 0, 1) forwards" }}
+          >
+            {/* Header del Drawer */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <Image
+                src="/images/logo.png"
+                alt="FAMESA C.A."
+                width={140}
+                height={34}
+                style={{ height: "32px", width: "auto", objectFit: "contain" }}
+              />
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors"
+                aria-label="Cerrar menú"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Contenido del Drawer */}
+            <div className="p-5 flex-1 flex flex-col gap-4">
+              {/* Tarjeta de Sesión Usuario / Admin */}
+              {homeUser ? (
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col gap-2.5">
+                  <div className="flex items-center gap-3">
+                    {homeUser.picture ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={homeUser.picture}
+                        alt={homeUser.name || "Usuario"}
+                        className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-xs"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center">
+                        {(homeUser.name || homeUser.email || "U")[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-sm text-slate-900 truncate">
+                        {homeUser.name || "Usuario"}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate">{homeUser.email}</p>
+                      <span className="inline-block mt-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {homeUser.isAdmin ? "Administrador" : "Cliente"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {homeUser.isAdmin ? (
+                    <Link
+                      href="/admin"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="mt-1 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-slate-900 text-amber-400 font-bold text-xs uppercase tracking-wider shadow-sm hover:bg-slate-800 transition-colors"
+                    >
+                      <Cog size={15} />
+                      Panel Admin FAMESA SUITE
+                    </Link>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logoutHomeUser();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="text-xs text-red-600 font-semibold hover:underline self-end pt-1"
+                  >
+                    Cerrar sesión
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Lista de Enlaces */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pb-1">
+                  Navegación del Taller
+                </span>
+                {[
+                  { href: "#servicios", label: "Servicios Especializados" },
+                  { href: "#catalogo", label: "Catálogo Técnico de Piezas" },
+                  { href: "#piezas", label: "Piezas a Medida" },
+                  { href: "#empresa", label: "Nuestra Empresa" },
+                  { href: "#materiales", label: "Materiales y Aleaciones" },
+                  { href: "#taller", label: "Taller y Maquinaria" },
+                  { href: "#calidad", label: "Control de Calidad" },
+                  { href: "#clientes", label: "Casos de Éxito & Clientes" },
+                  { href: "#cotiza", label: "Solicitar Cotización" },
+                ].map((item) => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-blue-600 transition-colors"
+                  >
+                    <span>{item.label}</span>
+                    <ChevronRight size={15} className="text-slate-400" />
+                  </a>
+                ))}
+              </div>
+
+              {/* Contacto Directo */}
+              <div className="mt-auto pt-4 border-t border-slate-100 flex flex-col gap-2.5">
+                <a
+                  href="https://wa.me/584143410187?text=Hola%20Famesa%2C%20quiero%20una%20cotizaci%C3%B3n"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all active:scale-98"
+                >
+                  <MessageCircle size={17} />
+                  Cotizar por WhatsApp
+                </a>
+                <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                  <a
+                    href="tel:+584143410187"
+                    className="py-2 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium flex items-center justify-center gap-1.5"
+                  >
+                    <Phone size={12} /> 0414 341 0187
+                  </a>
+                  <a
+                    href="tel:+584121435069"
+                    className="py-2 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium flex items-center justify-center gap-1.5"
+                  >
+                    <Phone size={12} /> 0412 143 5069
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </header>
 
       <main>
@@ -1373,7 +1584,7 @@ Enviado desde el portal oficial famesa.com.ve · Valencia, Carabobo`;
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "30px" }}>
               {[
                 { id: "todos", label: "Todos los servicios" },
-                { id: "metalmecanica", label: "Torno & Rodillos" },
+                { id: "metalmecanica", label: "Torno y Fresadora" },
                 { id: "plasticos", label: "Plásticos de Ingeniería" },
                 { id: "soldadura", label: "Soldaduras Especiales" },
                 { id: "recuperacion", label: "Reductores 24/7" },

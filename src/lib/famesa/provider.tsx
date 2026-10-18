@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import {
   makeSeed,
@@ -67,7 +67,7 @@ type ContextType = {
   receive: (id: string, qty: number) => void;
   payment: (id: string, amount: number, method: string, reference?: string) => void;
   saveCloud: () => Promise<void>;
-  loadCloud: () => Promise<void>;
+  loadCloud: (opts?: { silent?: boolean }) => Promise<void>;
   clearSession: () => void;
   resetClean: () => void;
   resetDemo: () => void;
@@ -658,19 +658,23 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loadCloud = async () => {
+  const loadCloud = async (opts?: { silent?: boolean }) => {
     setCloudBusy(true);
     try {
       // 1. Prioridad: hidratar datos reales desde Turso (sesión autenticada).
       if (await syncFromServer()) {
         audit('Datos maestros sincronizados desde Turso (sesión autenticada)');
-        toast.success('Datos sincronizados desde Turso');
+        if (!opts?.silent) {
+          toast.success('Datos sincronizados desde Turso');
+        }
         return;
       }
       // 2. Respaldo: instantánea local guardada manualmente.
       const raw = localStorage.getItem('famesa_suite_snapshot');
       if (!raw) {
-        toast.info('No hay instantánea previa; mostrando base activa');
+        if (!opts?.silent) {
+          toast.info('No hay instantánea previa; mostrando base activa');
+        }
         return;
       }
       const saved = JSON.parse(raw) as {
@@ -684,10 +688,14 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
         setRateState(saved.rate);
         setMirrorState(saved.mirror);
         setAudits(saved.audits);
-        toast.success('Estado recuperado correctamente');
+        if (!opts?.silent) {
+          toast.success('Estado recuperado correctamente');
+        }
       }
     } catch {
-      toast.error('No se pudo recuperar el estado');
+      if (!opts?.silent) {
+        toast.error('No se pudo recuperar el estado');
+      }
     } finally {
       setCloudBusy(false);
     }
@@ -711,49 +719,82 @@ export function FamesaProvider({ children }: { children: ReactNode }) {
     toast.success('Datos de demostración restaurados');
   };
 
+  const contextValue = useMemo(
+    () => ({
+      data,
+      rate,
+      activeRateType,
+      rates,
+      ratesLoading,
+      ratesUpdatedAt,
+      selectRateType,
+      refreshRates,
+      mirror,
+      role,
+      period,
+      audits,
+      setRate,
+      setMirror: (n: boolean) => {
+        setMirrorState(n);
+        audit(`Visualización Bs. ${n ? 'activada' : 'desactivada'}`);
+      },
+      setRole: (r: Role) => {
+        setRoleState(r);
+        audit(`Simulación de rol: ${r}`);
+      },
+      setPeriod: setPeriodState,
+      add,
+      update,
+      deleteRecord,
+      convertLead,
+      approveQuote,
+      invoiceOrder,
+      moveStock,
+      receive,
+      payment,
+      saveCloud,
+      loadCloud,
+      clearSession,
+      resetClean,
+      resetDemo,
+      userEmail,
+      cloudBusy,
+    }),
+    [
+      data,
+      rate,
+      activeRateType,
+      rates,
+      ratesLoading,
+      ratesUpdatedAt,
+      selectRateType,
+      refreshRates,
+      mirror,
+      role,
+      period,
+      audits,
+      setRate,
+      add,
+      update,
+      deleteRecord,
+      convertLead,
+      approveQuote,
+      invoiceOrder,
+      moveStock,
+      receive,
+      payment,
+      saveCloud,
+      loadCloud,
+      audit,
+      resetClean,
+      resetDemo,
+      userEmail,
+      cloudBusy,
+    ],
+  );
+
   return (
-    <Context.Provider
-      value={{
-        data,
-        rate,
-        activeRateType,
-        rates,
-        ratesLoading,
-        ratesUpdatedAt,
-        selectRateType,
-        refreshRates,
-        mirror,
-        role,
-        period,
-        audits,
-        setRate,
-        setMirror: (n) => {
-          setMirrorState(n);
-          audit(`Visualización Bs. ${n ? 'activada' : 'desactivada'}`);
-        },
-        setRole: (r) => {
-          setRoleState(r);
-          audit(`Simulación de rol: ${r}`);
-        },
-        setPeriod: setPeriodState,
-        add,
-        update,
-        deleteRecord,
-        convertLead,
-        approveQuote,
-        invoiceOrder,
-        moveStock,
-        receive,
-        payment,
-        saveCloud,
-        loadCloud,
-        clearSession,
-        resetClean,
-        resetDemo,
-        userEmail,
-        cloudBusy,
-      }}
-    >
+    <Context.Provider value={contextValue}>
       {children}
     </Context.Provider>
   );

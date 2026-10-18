@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import { FamesaProvider, useFamesa } from "@/lib/famesa/provider";
 import { FamesaShell } from "@/components/famesa/shell";
@@ -18,6 +18,10 @@ type AuthState = "checking" | "locked" | "unlocked";
  */
 function AdminGate({ children }: { children: ReactNode }) {
   const f = useFamesa();
+  const fRef = useRef(f);
+  fRef.current = f;
+  const hasLoadedRef = useRef(false);
+
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [auth, setAuth] = useState<AuthState>("checking");
 
@@ -38,7 +42,10 @@ function AdminGate({ children }: { children: ReactNode }) {
         if (storedToken) {
           if (!isCancelled) {
             setAuth("unlocked");
-            void f.loadCloud();
+            if (!hasLoadedRef.current) {
+              hasLoadedRef.current = true;
+              void fRef.current.loadCloud({ silent: true });
+            }
           }
           return;
         }
@@ -59,7 +66,10 @@ function AdminGate({ children }: { children: ReactNode }) {
             localStorage.setItem(SESSION_TOKEN_KEY, payload.token);
             if (!isCancelled) {
               setAuth("unlocked");
-              void f.loadCloud();
+              if (!hasLoadedRef.current) {
+                hasLoadedRef.current = true;
+                void fRef.current.loadCloud({ silent: true });
+              }
             }
             return;
           }
@@ -77,7 +87,7 @@ function AdminGate({ children }: { children: ReactNode }) {
     return () => {
       isCancelled = true;
     };
-  }, [f]);
+  }, []);
 
   const handleLock = useCallback(async () => {
     try {
@@ -101,9 +111,10 @@ function AdminGate({ children }: { children: ReactNode }) {
     } catch {
       /* ignorar */
     }
-    f.clearSession();
+    hasLoadedRef.current = false;
+    fRef.current.clearSession();
     setAuth("locked");
-  }, [f]);
+  }, []);
 
   useEffect(() => {
     const onLock = () => {
@@ -137,7 +148,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <FamesaProvider>
       <AdminGate>{children}</AdminGate>
-      <Toaster position="top-right" richColors />
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        duration={3500}
+        visibleToasts={3}
+      />
     </FamesaProvider>
   );
 }

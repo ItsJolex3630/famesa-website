@@ -79,7 +79,7 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
                 localStorage.setItem("famesa_admin_user", JSON.stringify(data.user));
                 localStorage.setItem("kt_admin_user", JSON.stringify(data.user));
                 localStorage.setItem("kt_user", JSON.stringify(data.user));
-                await fRef.current.loadCloud();
+                await fRef.current.loadCloud({ silent: true });
                 onUnlockedRef.current();
               } else {
                 setError(
@@ -173,7 +173,7 @@ export function AdminAuthGate({ onUnlocked }: AdminAuthGateProps) {
         /* storage no disponible */
       }
       setApiKey("");
-      await f.loadCloud();
+      await f.loadCloud({ silent: true });
       onUnlocked();
     } catch {
       setError("No se pudo conectar con el servidor de seguridad. Reintenta.");

@@ -149,3 +149,41 @@ section.settings-section{background:var(--surface)}
     gap: 10px !important;
   }
 }
+
+/* ===========================================================================
+   FAMESA SUITE · Notificaciones Sonner (protección contra reset de admin.css)
+   =========================================================================== */
+[data-sonner-toaster] {
+  z-index: 999999 !important;
+  font-family: var(--font-sans) !important;
+}
+
+[data-sonner-toast] {
+  border-radius: 10px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2) !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.01em !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-sonner-toast][data-type="success"] {
+  border-left: 4px solid var(--success) !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  border-left: 4px solid var(--danger) !important;
+}
+
+[data-sonner-toast][data-type="info"] {
+  border-left: 4px solid var(--electric) !important;
+}
+
+[data-sonner-toast] [data-button] {
+  border-radius: 6px !important;
+}
+
+[data-sonner-toast] [data-close-button] {
+  border-radius: 50% !important;
+}
+
